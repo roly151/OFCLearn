@@ -10,6 +10,7 @@ import '../../../core/widgets/page_header.dart';
 import '../../../core/widgets/section_card.dart';
 import '../domain/group_detail.dart';
 import '../domain/group_feed_item.dart';
+import 'group_join_controller.dart';
 import 'group_post_controller.dart';
 
 class GroupDetailPage extends ConsumerStatefulWidget {
@@ -46,6 +47,7 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
     final detail = ref.watch(groupDetailProvider(widget.groupId));
     final feed = ref.watch(groupFeedProvider(widget.groupId));
     final isPosting = ref.watch(groupPostControllerProvider).isLoading;
+    final isJoining = ref.watch(groupJoinControllerProvider).isLoading;
 
     return AmbientScaffold(
       child: Column(
@@ -74,7 +76,30 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
                 children: <Widget>[
                   detail.when(
-                    data: (group) => _GroupSummaryCard(group: group),
+                    data: (group) => _GroupSummaryCard(
+                      group: group,
+                      isJoining: isJoining,
+                      onJoin: () async {
+                        try {
+                          final result = await ref
+                              .read(groupJoinControllerProvider.notifier)
+                              .joinGroup(widget.groupId);
+                          if (!mounted) {
+                            return;
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(result.message)),
+                          );
+                        } catch (error) {
+                          if (!mounted) {
+                            return;
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(error.toString())),
+                          );
+                        }
+                      },
+                    ),
                     error: (error, _) => AsyncStateView(
                       message: error.toString(),
                       onRetry: () =>
@@ -172,9 +197,15 @@ class _TopBar extends StatelessWidget {
 }
 
 class _GroupSummaryCard extends StatelessWidget {
-  const _GroupSummaryCard({required this.group});
+  const _GroupSummaryCard({
+    required this.group,
+    required this.onJoin,
+    required this.isJoining,
+  });
 
   final GroupDetail group;
+  final Future<void> Function() onJoin;
+  final bool isJoining;
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +235,20 @@ class _GroupSummaryCard extends StatelessWidget {
               _Tag(label: group.isMember ? 'Member' : 'Not joined'),
             ],
           ),
+          if (!group.isMember) ...<Widget>[
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: isJoining ? null : onJoin,
+              icon: isJoining
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.group_add_rounded),
+              label: Text(isJoining ? 'Joining...' : 'Join group'),
+            ),
+          ],
         ],
       ),
     );

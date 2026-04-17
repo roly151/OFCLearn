@@ -9,7 +9,9 @@ import '../features/courses/domain/course_detail.dart';
 import '../features/courses/domain/course_summary.dart';
 import '../features/courses/presentation/course_detail_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
+import '../features/events/domain/event_detail.dart';
 import '../features/events/domain/event_summary.dart';
+import '../features/events/presentation/event_detail_page.dart';
 import '../features/groups/domain/group_detail.dart';
 import '../features/groups/domain/group_feed_item.dart';
 import '../features/groups/domain/group_summary.dart';
@@ -45,6 +47,13 @@ final previousEventsProvider = FutureProvider<List<EventSummary>>((ref) {
 
 final upcomingEventsProvider = FutureProvider<List<EventSummary>>((ref) {
   return ref.watch(eventsRepositoryProvider).fetchUpcomingEvents();
+});
+
+final eventDetailProvider = FutureProvider.family<EventDetail, int>((
+  ref,
+  eventId,
+) {
+  return ref.watch(eventsRepositoryProvider).fetchEventDetail(eventId);
 });
 
 final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
@@ -105,6 +114,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           return GroupDetailPage(
             tab: AppTab.fromSlug(state.pathParameters['tab']),
             groupId: groupId,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/app/:tab/event/:id',
+        builder: (context, state) {
+          final eventId = int.parse(state.pathParameters['id']!);
+          return EventDetailPage(
+            tab: AppTab.fromSlug(state.pathParameters['tab']),
+            eventId: eventId,
           );
         },
       ),

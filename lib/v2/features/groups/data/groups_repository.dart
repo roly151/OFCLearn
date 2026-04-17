@@ -43,4 +43,12 @@ class GroupsRepository {
       fallbackMessage: 'Post published successfully.',
     );
   }
+
+  Future<ActionResult> joinGroup(int groupId) async {
+    final response = await _apiClient.postMap('/groups/$groupId/join');
+    return ActionResult.fromJson(
+      response,
+      fallbackMessage: 'Group joined successfully.',
+    );
+  }
 }
