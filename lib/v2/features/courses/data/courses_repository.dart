@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../domain/course_detail.dart';
 import '../domain/course_summary.dart';
 
 class CoursesRepository {
@@ -12,5 +13,10 @@ class CoursesRepository {
         .whereType<Map<String, dynamic>>()
         .map(CourseSummary.fromJson)
         .toList(growable: false);
+  }
+
+  Future<CourseDetail> fetchCourseDetail(int courseId) async {
+    final response = await _apiClient.getMap('/courses/$courseId');
+    return CourseDetail.fromJson(response);
   }
 }

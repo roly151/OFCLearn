@@ -5,10 +5,15 @@ import 'package:go_router/go_router.dart';
 import '../app/app_shell_page.dart';
 import '../features/auth/presentation/auth_controller.dart';
 import '../features/auth/presentation/sign_in_page.dart';
+import '../features/courses/domain/course_detail.dart';
 import '../features/courses/domain/course_summary.dart';
+import '../features/courses/presentation/course_detail_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
 import '../features/events/domain/event_summary.dart';
+import '../features/groups/domain/group_detail.dart';
+import '../features/groups/domain/group_feed_item.dart';
 import '../features/groups/domain/group_summary.dart';
+import '../features/groups/presentation/group_detail_page.dart';
 import 'dependencies.dart';
 
 final coursesProvider = FutureProvider<List<CourseSummary>>((ref) {
@@ -17,6 +22,21 @@ final coursesProvider = FutureProvider<List<CourseSummary>>((ref) {
 
 final groupsProvider = FutureProvider<List<GroupSummary>>((ref) {
   return ref.watch(groupsRepositoryProvider).fetchGroups();
+});
+
+final courseDetailProvider =
+    FutureProvider.family<CourseDetail, int>((ref, courseId) {
+  return ref.watch(coursesRepositoryProvider).fetchCourseDetail(courseId);
+});
+
+final groupDetailProvider =
+    FutureProvider.family<GroupDetail, int>((ref, groupId) {
+  return ref.watch(groupsRepositoryProvider).fetchGroupDetail(groupId);
+});
+
+final groupFeedProvider =
+    FutureProvider.family<List<GroupFeedItem>, int>((ref, groupId) {
+  return ref.watch(groupsRepositoryProvider).fetchGroupFeed(groupId);
 });
 
 final previousEventsProvider = FutureProvider<List<EventSummary>>((ref) {
@@ -65,6 +85,26 @@ final routerProvider = Provider<GoRouter>((ref) {
             currentTab: tab,
             onTabSelected: (nextTab) =>
                 GoRouter.of(context).go('/app/${nextTab.slug}'),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/app/:tab/course/:id',
+        builder: (context, state) {
+          final courseId = int.parse(state.pathParameters['id']!);
+          return CourseDetailPage(
+            tab: AppTab.fromSlug(state.pathParameters['tab']),
+            courseId: courseId,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/app/:tab/group/:id',
+        builder: (context, state) {
+          final groupId = int.parse(state.pathParameters['id']!);
+          return GroupDetailPage(
+            tab: AppTab.fromSlug(state.pathParameters['tab']),
+            groupId: groupId,
           );
         },
       ),
