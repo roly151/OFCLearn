@@ -9,6 +9,7 @@ import '../../../core/widgets/async_state_view.dart';
 import '../../../core/widgets/page_header.dart';
 import '../../../core/widgets/section_card.dart';
 import '../domain/course_detail.dart';
+import 'course_action_controller.dart';
 
 class CourseDetailPage extends ConsumerWidget {
   const CourseDetailPage({
@@ -23,6 +24,7 @@ class CourseDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(courseDetailProvider(courseId));
+    final isJoining = ref.watch(courseActionControllerProvider).isLoading;
 
     return AmbientScaffold(
       child: Column(
@@ -41,7 +43,30 @@ class CourseDetailPage extends ConsumerWidget {
               data: (course) => RefreshIndicator(
                 onRefresh: () =>
                     ref.refresh(courseDetailProvider(courseId).future),
-                child: _CourseDetailContent(course: course),
+                child: _CourseDetailContent(
+                  course: course,
+                  isJoining: isJoining,
+                  onJoinCourse: () async {
+                    try {
+                      final result = await ref
+                          .read(courseActionControllerProvider.notifier)
+                          .joinCourse(courseId);
+                      if (!context.mounted) {
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(result.message)),
+                      );
+                    } catch (error) {
+                      if (!context.mounted) {
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(error.toString())),
+                      );
+                    }
+                  },
+                ),
               ),
               error: (error, _) => AsyncStateView(
                 message: error.toString(),
@@ -57,9 +82,15 @@ class CourseDetailPage extends ConsumerWidget {
 }
 
 class _CourseDetailContent extends StatelessWidget {
-  const _CourseDetailContent({required this.course});
+  const _CourseDetailContent({
+    required this.course,
+    required this.onJoinCourse,
+    required this.isJoining,
+  });
 
   final CourseDetail course;
+  final Future<void> Function() onJoinCourse;
+  final bool isJoining;
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +122,18 @@ class _CourseDetailContent extends StatelessWidget {
                   _DetailChip(label: course.status),
                   if (course.date.isNotEmpty) _DetailChip(label: course.date),
                 ],
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: isJoining ? null : onJoinCourse,
+                icon: isJoining
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.how_to_reg_rounded),
+                label: Text(isJoining ? 'Joining...' : 'Join course'),
               ),
             ],
           ),

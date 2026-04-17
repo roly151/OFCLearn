@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../../../core/domain/action_result.dart';
 import '../domain/group_detail.dart';
 import '../domain/group_feed_item.dart';
 import '../domain/group_summary.dart';
@@ -27,5 +28,19 @@ class GroupsRepository {
         .whereType<Map<String, dynamic>>()
         .map(GroupFeedItem.fromJson)
         .toList(growable: false);
+  }
+
+  Future<ActionResult> createGroupPost({
+    required int groupId,
+    required String content,
+  }) async {
+    final response = await _apiClient.postMap(
+      '/groups/$groupId/feed',
+      data: <String, dynamic>{'content': content},
+    );
+    return ActionResult.fromJson(
+      response,
+      fallbackMessage: 'Post published successfully.',
+    );
   }
 }

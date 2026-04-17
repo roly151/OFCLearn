@@ -10,8 +10,9 @@ import '../../../core/widgets/page_header.dart';
 import '../../../core/widgets/section_card.dart';
 import '../domain/group_detail.dart';
 import '../domain/group_feed_item.dart';
+import 'group_post_controller.dart';
 
-class GroupDetailPage extends ConsumerWidget {
+class GroupDetailPage extends ConsumerStatefulWidget {
   const GroupDetailPage({
     required this.tab,
     required this.groupId,
@@ -22,14 +23,34 @@ class GroupDetailPage extends ConsumerWidget {
   final int groupId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detail = ref.watch(groupDetailProvider(groupId));
-    final feed = ref.watch(groupFeedProvider(groupId));
+  ConsumerState<GroupDetailPage> createState() => _GroupDetailPageState();
+}
+
+class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
+  late final TextEditingController _postController;
+
+  @override
+  void initState() {
+    super.initState();
+    _postController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _postController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = ref.watch(groupDetailProvider(widget.groupId));
+    final feed = ref.watch(groupFeedProvider(widget.groupId));
+    final isPosting = ref.watch(groupPostControllerProvider).isLoading;
 
     return AmbientScaffold(
       child: Column(
         children: <Widget>[
-          _TopBar(onBack: () => context.go('/app/${tab.slug}')),
+          _TopBar(onBack: () => context.go('/app/${widget.tab.slug}')),
           const PageHeader(
             title: 'Group detail',
             subtitle:
@@ -38,11 +59,15 @@ class GroupDetailPage extends ConsumerWidget {
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
-                ref.invalidate(groupDetailProvider(groupId));
-                ref.invalidate(groupFeedProvider(groupId));
+                ref.invalidate(groupDetailProvider(widget.groupId));
+                ref.invalidate(groupFeedProvider(widget.groupId));
                 await Future.wait<void>(<Future<void>>[
-                  ref.read(groupDetailProvider(groupId).future).then((_) {}),
-                  ref.read(groupFeedProvider(groupId).future).then((_) {}),
+                  ref
+                      .read(groupDetailProvider(widget.groupId).future)
+                      .then((_) {}),
+                  ref
+                      .read(groupFeedProvider(widget.groupId).future)
+                      .then((_) {}),
                 ]);
               },
               child: ListView(
@@ -53,12 +78,51 @@ class GroupDetailPage extends ConsumerWidget {
                     error: (error, _) => AsyncStateView(
                       message: error.toString(),
                       onRetry: () =>
-                          ref.invalidate(groupDetailProvider(groupId)),
+                          ref.invalidate(groupDetailProvider(widget.groupId)),
                     ),
                     loading: () => const Padding(
                       padding: EdgeInsets.all(24),
                       child: Center(child: CircularProgressIndicator()),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  _ComposerCard(
+                    controller: _postController,
+                    isPosting: isPosting,
+                    onSubmit: () async {
+                      final content = _postController.text.trim();
+                      if (content.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Write something before posting.'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      try {
+                        final result = await ref
+                            .read(groupPostControllerProvider.notifier)
+                            .createPost(
+                              groupId: widget.groupId,
+                              content: content,
+                            );
+                        _postController.clear();
+                        if (!mounted) {
+                          return;
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(result.message)),
+                        );
+                      } catch (error) {
+                        if (!mounted) {
+                          return;
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(error.toString())),
+                        );
+                      }
+                    },
                   ),
                   const SizedBox(height: 16),
                   Text('Feed', style: Theme.of(context).textTheme.titleLarge),
@@ -67,7 +131,8 @@ class GroupDetailPage extends ConsumerWidget {
                     data: (items) => _GroupFeedList(items: items),
                     error: (error, _) => AsyncStateView(
                       message: error.toString(),
-                      onRetry: () => ref.invalidate(groupFeedProvider(groupId)),
+                      onRetry: () =>
+                          ref.invalidate(groupFeedProvider(widget.groupId)),
                     ),
                     loading: () => const Padding(
                       padding: EdgeInsets.all(24),
@@ -138,6 +203,57 @@ class _GroupSummaryCard extends StatelessWidget {
               if (group.time.isNotEmpty) _Tag(label: group.time),
               _Tag(label: group.isMember ? 'Member' : 'Not joined'),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ComposerCard extends StatelessWidget {
+  const _ComposerCard({
+    required this.controller,
+    required this.isPosting,
+    required this.onSubmit,
+  });
+
+  final TextEditingController controller;
+  final bool isPosting;
+  final Future<void> Function() onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Post an update', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            enabled: !isPosting,
+            minLines: 3,
+            maxLines: 6,
+            textInputAction: TextInputAction.newline,
+            decoration: const InputDecoration(
+              hintText: 'Share a progress update, question, or resource.',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: isPosting ? null : onSubmit,
+              icon: isPosting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_rounded),
+              label: Text(isPosting ? 'Posting...' : 'Post update'),
+            ),
           ),
         ],
       ),
