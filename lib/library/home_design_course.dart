@@ -1,12 +1,12 @@
 // ignore_for_file: non_constant_identifier_names
 import 'dart:convert';
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:best_flutter_ui_templates/comman/comment.dart';
-import 'package:best_flutter_ui_templates/api/api.dart';
-import 'package:best_flutter_ui_templates/comman/custome_dialog.dart';
-import 'package:best_flutter_ui_templates/library/course_info_screen.dart';
-import 'package:best_flutter_ui_templates/library/models/category.dart';
-import 'package:best_flutter_ui_templates/main.dart';
+import 'package:ofc_learn_v2/comman/comment.dart';
+import 'package:ofc_learn_v2/api/api.dart';
+import 'package:ofc_learn_v2/comman/custome_dialog.dart';
+import 'package:ofc_learn_v2/library/course_info_screen.dart';
+import 'package:ofc_learn_v2/library/models/category.dart';
+import 'package:ofc_learn_v2/main.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../comman/design_course_app_theme.dart';

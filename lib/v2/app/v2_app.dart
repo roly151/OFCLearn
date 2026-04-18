@@ -16,7 +16,7 @@ class V2App extends ConsumerWidget {
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Color(0xFFF4EFE6),
+        systemNavigationBarColor: V2Palette.canvas,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
     );

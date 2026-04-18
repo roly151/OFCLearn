@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../app/v2_theme.dart';
+
 class AsyncStateView extends StatelessWidget {
   const AsyncStateView({
     this.message,
@@ -24,7 +26,7 @@ class AsyncStateView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(icon, size: 40, color: const Color(0xFF7E8C8F)),
+              Icon(icon, size: 40, color: V2Palette.muted),
               const SizedBox(height: 12),
               Text(
                 message ?? 'Something went wrong.',

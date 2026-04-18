@@ -3,8 +3,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:best_flutter_ui_templates/api/api.dart';
-import 'package:best_flutter_ui_templates/comman/custome_dialog.dart';
+import 'package:ofc_learn_v2/api/api.dart';
+import 'package:ofc_learn_v2/comman/custome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';

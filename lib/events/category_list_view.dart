@@ -1,9 +1,9 @@
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:best_flutter_ui_templates/events/models/category.dart';
+import 'package:ofc_learn_v2/events/models/category.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:best_flutter_ui_templates/api/api.dart';
+import 'package:ofc_learn_v2/api/api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';

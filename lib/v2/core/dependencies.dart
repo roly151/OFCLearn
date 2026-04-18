@@ -6,6 +6,7 @@ import '../core/network/api_client.dart';
 import '../core/storage/token_storage.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/courses/data/courses_repository.dart';
+import '../features/dashboard/data/dashboard_repository.dart';
 import '../features/events/data/events_repository.dart';
 import '../features/groups/data/groups_repository.dart';
 
@@ -27,6 +28,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient(
     baseUrl: config.baseUrl,
     tokenStorage: storage,
+    defaultHeaders: config.defaultHeaders,
   );
 });
 
@@ -47,4 +49,8 @@ final groupsRepositoryProvider = Provider<GroupsRepository>((ref) {
 
 final eventsRepositoryProvider = Provider<EventsRepository>((ref) {
   return EventsRepository(ref.watch(apiClientProvider));
+});
+
+final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
+  return DashboardRepository(ref.watch(apiClientProvider));
 });

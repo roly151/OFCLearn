@@ -2,7 +2,7 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:best_flutter_ui_templates/api/api.dart';
+import 'package:ofc_learn_v2/api/api.dart';
 import 'package:flutter/material.dart';
 import './registerevent.dart';
 

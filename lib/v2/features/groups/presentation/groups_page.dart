@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/v2_theme.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_state_view.dart';
 import '../../../core/widgets/page_header.dart';
@@ -65,7 +66,7 @@ class _GroupsList extends StatelessWidget {
                 children: <Widget>[
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: const Color(0xFFD7E6E2),
+                    backgroundColor: V2Palette.navIndicator,
                     child: Text(
                       group.title.isEmpty ? '?' : group.title[0].toUpperCase(),
                     ),

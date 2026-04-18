@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/v2_theme.dart';
 import '../../../core/widgets/ambient_scaffold.dart';
 import '../../../core/widgets/section_card.dart';
 import 'auth_controller.dart';
@@ -16,6 +17,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  var _obscurePassword = true;
 
   @override
   void dispose() {
@@ -52,7 +54,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.88),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0xFFE7DAC8)),
+                    border: Border.all(color: V2Palette.cardBorder),
                   ),
                   child: const Text('OFC Learn v2'),
                 ),
@@ -99,9 +101,24 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordController,
-                          obscureText: true,
-                          decoration: const InputDecoration(
+                          obscureText: _obscurePassword,
+                          decoration: InputDecoration(
                             labelText: 'Password',
+                            suffixIcon: IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
+                              ),
+                              tooltip: _obscurePassword
+                                  ? 'Show password'
+                                  : 'Hide password',
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -117,7 +134,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                             onPressed: authState.isLoading ? null : _submit,
                             style: FilledButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 18),
-                              backgroundColor: const Color(0xFF0E6B62),
+                              backgroundColor: V2Palette.primaryBlue,
+                              foregroundColor: Colors.white,
                             ),
                             child: authState.isLoading
                                 ? const SizedBox(

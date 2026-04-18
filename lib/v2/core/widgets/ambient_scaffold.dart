@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../app/v2_theme.dart';
+
 class AmbientScaffold extends StatelessWidget {
   const AmbientScaffold({
     required this.child,
@@ -17,9 +19,9 @@ class AmbientScaffold extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: <Color>[
-              Color(0xFFF6F1E7),
-              Color(0xFFE4EFE8),
-              Color(0xFFF5E7D8),
+              Color(0xFFF6F3EA),
+              Color(0xFFE8EDF3),
+              Color(0xFFF3EBDA),
             ],
           ),
         ),
@@ -29,7 +31,7 @@ class AmbientScaffold extends StatelessWidget {
               top: -60,
               right: -40,
               child: _GlowBubble(
-                color: const Color(0xFF0E6B62).withValues(alpha: 0.14),
+                color: V2Palette.deepBlue.withValues(alpha: 0.22),
                 size: 220,
               ),
             ),
@@ -37,7 +39,7 @@ class AmbientScaffold extends StatelessWidget {
               bottom: -70,
               left: -10,
               child: _GlowBubble(
-                color: const Color(0xFFC7922F).withValues(alpha: 0.18),
+                color: V2Palette.foliage.withValues(alpha: 0.12),
                 size: 240,
               ),
             ),

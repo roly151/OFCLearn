@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_shell_page.dart';
+import '../../../app/v2_theme.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/ambient_scaffold.dart';
 import '../../../core/widgets/async_state_view.dart';
@@ -168,7 +169,7 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFE7F0ED),
+        color: V2Palette.seaGlass,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(

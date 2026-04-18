@@ -1,7 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, unrelated_type_equality_checks
 import 'dart:convert';
-import 'package:best_flutter_ui_templates/api/api.dart';
-import 'package:best_flutter_ui_templates/comman/custome_dialog.dart';
+import 'package:ofc_learn_v2/api/api.dart';
+import 'package:ofc_learn_v2/comman/custome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_spinkit/flutter_spinkit.dart';

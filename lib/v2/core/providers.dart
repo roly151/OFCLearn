@@ -8,7 +8,8 @@ import '../features/auth/presentation/sign_in_page.dart';
 import '../features/courses/domain/course_detail.dart';
 import '../features/courses/domain/course_summary.dart';
 import '../features/courses/presentation/course_detail_page.dart';
-import '../features/dashboard/presentation/dashboard_page.dart';
+import '../features/dashboard/domain/activity_feed_item.dart';
+import '../features/dashboard/domain/activity_comment.dart';
 import '../features/events/domain/event_detail.dart';
 import '../features/events/domain/event_summary.dart';
 import '../features/events/presentation/event_detail_page.dart';
@@ -56,21 +57,14 @@ final eventDetailProvider = FutureProvider.family<EventDetail, int>((
   return ref.watch(eventsRepositoryProvider).fetchEventDetail(eventId);
 });
 
-final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
-  final results = await Future.wait<dynamic>(<Future<dynamic>>[
-    ref.watch(coursesRepositoryProvider).fetchCourses(),
-    ref.watch(groupsRepositoryProvider).fetchGroups(),
-    ref.watch(eventsRepositoryProvider).fetchPreviousEvents(),
-    ref.watch(eventsRepositoryProvider).fetchUpcomingEvents(),
-  ]);
-
-  return DashboardStats(
-    courses: (results[0] as List<dynamic>).length,
-    groups: (results[1] as List<dynamic>).length,
-    previousEvents: (results[2] as List<dynamic>).length,
-    upcomingEvents: (results[3] as List<dynamic>).length,
-  );
+final dashboardActivityProvider = FutureProvider<List<ActivityFeedItem>>((ref) {
+  return ref.watch(dashboardRepositoryProvider).fetchActivityFeed();
 });
+
+final activityCommentsProvider =
+    FutureProvider.family<List<ActivityComment>, int>((ref, activityId) {
+      return ref.watch(dashboardRepositoryProvider).fetchComments(activityId);
+    });
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authControllerProvider);

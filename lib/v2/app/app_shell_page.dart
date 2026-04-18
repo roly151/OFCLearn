@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'v2_theme.dart';
 import '../features/courses/presentation/courses_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
 import '../features/events/presentation/events_page.dart';
@@ -41,8 +42,9 @@ class AppShellPage extends StatelessWidget {
                 ),
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.92),
+                    color: V2Palette.surface.withValues(alpha: 0.96),
                     borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: V2Palette.cardBorder),
                   ),
                   child: Padding(
                     padding:

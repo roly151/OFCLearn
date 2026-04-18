@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:best_flutter_ui_templates/app_theme.dart';
-import 'package:best_flutter_ui_templates/home_screen.dart';
-import 'package:best_flutter_ui_templates/sidebarscreens/rank.dart';
-import 'package:best_flutter_ui_templates/sidebarscreens/CPDpoint.dart';
-import 'package:best_flutter_ui_templates/sidebarscreens/connection.dart';
-import 'package:best_flutter_ui_templates/sidebarscreens/profile/profile.dart';
+import 'package:ofc_learn_v2/app_theme.dart';
+import 'package:ofc_learn_v2/home_screen.dart';
+import 'package:ofc_learn_v2/sidebarscreens/rank.dart';
+import 'package:ofc_learn_v2/sidebarscreens/CPDpoint.dart';
+import 'package:ofc_learn_v2/sidebarscreens/connection.dart';
+import 'package:ofc_learn_v2/sidebarscreens/profile/profile.dart';
 import './custom_drawer/custom_drawer/drawer_user_controller.dart';
 import './custom_drawer/custom_drawer/home_drawer.dart';
 

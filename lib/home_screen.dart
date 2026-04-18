@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:best_flutter_ui_templates/activity/home_design_course.dart';
-import 'package:best_flutter_ui_templates/course/home_design_course.dart';
-import 'package:best_flutter_ui_templates/events/home_design_course.dart';
-import 'package:best_flutter_ui_templates/groups/home_design_course.dart';
-import 'package:best_flutter_ui_templates/library/home_design_course.dart';
+import 'package:ofc_learn_v2/activity/home_design_course.dart';
+import 'package:ofc_learn_v2/course/home_design_course.dart';
+import 'package:ofc_learn_v2/events/home_design_course.dart';
+import 'package:ofc_learn_v2/groups/home_design_course.dart';
+import 'package:ofc_learn_v2/library/home_design_course.dart';
 
 class MyHomePage extends StatefulWidget {
   var indexValue;

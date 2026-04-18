@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:best_flutter_ui_templates/sidebarscreens/profile/edit.dart';
-import 'package:best_flutter_ui_templates/sidebarscreens/profile/profilephoto.dart';
-import 'package:best_flutter_ui_templates/sidebarscreens/profile/coverphoto.dart';
+import 'package:ofc_learn_v2/sidebarscreens/profile/edit.dart';
+import 'package:ofc_learn_v2/sidebarscreens/profile/profilephoto.dart';
+import 'package:ofc_learn_v2/sidebarscreens/profile/coverphoto.dart';
 import 'package:http/http.dart' as http;
 
 class Editprofile extends StatefulWidget {

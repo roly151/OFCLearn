@@ -1,12 +1,12 @@
 import 'dart:convert';
 
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:best_flutter_ui_templates/api/api.dart';
-import 'package:best_flutter_ui_templates/course/category_list_view.dart';
-import 'package:best_flutter_ui_templates/course/course_info_screen.dart';
-import 'package:best_flutter_ui_templates/course/models/category.dart';
-// import 'package:best_flutter_ui_templates/course/popular_course_list_view.dart';
-import 'package:best_flutter_ui_templates/main.dart';
+import 'package:ofc_learn_v2/api/api.dart';
+import 'package:ofc_learn_v2/course/category_list_view.dart';
+import 'package:ofc_learn_v2/course/course_info_screen.dart';
+import 'package:ofc_learn_v2/course/models/category.dart';
+// import 'package:ofc_learn_v2/course/popular_course_list_view.dart';
+import 'package:ofc_learn_v2/main.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../comman/design_course_app_theme.dart';

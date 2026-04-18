@@ -1,31 +1,25 @@
 {
     "version": "0.2.0",
     "configurations": [
-        
-
-
         {
-            "name": "SeanDouglas12",
+            "name": "OFC Learn v2",
+            "program": "lib/main.dart",
             "request": "launch",
             "type": "dart"
         },
         {
-            "name": "SeanDouglas12 (profile mode)",
+            "name": "OFC Learn v2 (profile)",
+            "program": "lib/main.dart",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
-            "name": "SeanDouglas12 (release mode)",
+            "name": "OFC Learn v2 (release)",
+            "program": "lib/main.dart",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"
-        },
-        {
-            "name": "Flutter",
-            "program": "lib/main.dart",
-            "request": "launch",
-            "type": "dart"
         }
     ]
 }

@@ -1,11 +1,11 @@
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:best_flutter_ui_templates/events/course_info_screen.dart';
-import 'package:best_flutter_ui_templates/events/models/category.dart';
-import 'package:best_flutter_ui_templates/main.dart';
+import 'package:ofc_learn_v2/events/course_info_screen.dart';
+import 'package:ofc_learn_v2/events/models/category.dart';
+import 'package:ofc_learn_v2/main.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:best_flutter_ui_templates/api/api.dart';
+import 'package:ofc_learn_v2/api/api.dart';
 
 class PopularCourseListView extends StatefulWidget {
   const PopularCourseListView({Key? key, this.callBack}) : super(key: key);

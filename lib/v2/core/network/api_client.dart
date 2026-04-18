@@ -7,6 +7,7 @@ class ApiClient {
   ApiClient({
     required String baseUrl,
     required TokenStorage tokenStorage,
+    Map<String, Object> defaultHeaders = const <String, Object>{},
   })  : _tokenStorage = tokenStorage,
         _dio = Dio(
           BaseOptions(
@@ -14,8 +15,9 @@ class ApiClient {
             connectTimeout: const Duration(seconds: 20),
             receiveTimeout: const Duration(seconds: 30),
             responseType: ResponseType.json,
-            headers: const <String, Object>{
+            headers: <String, Object>{
               'Accept': 'application/json',
+              ...defaultHeaders,
             },
           ),
         ) {
@@ -55,10 +57,28 @@ class ApiClient {
 
   Future<Map<String, dynamic>> postMap(
     String path, {
-    Map<String, dynamic>? data,
+    Object? data,
   }) async {
     final response = await _guard(
       () => _dio.post<dynamic>(path, data: data),
+    );
+    final body = response.data;
+    if (body is Map<String, dynamic>) {
+      return body;
+    }
+    throw const ApiException(message: 'Expected an object response.');
+  }
+
+  Future<Map<String, dynamic>> postMultipartMap(
+    String path, {
+    required FormData data,
+  }) async {
+    final response = await _guard(
+      () => _dio.post<dynamic>(
+        path,
+        data: data,
+        options: Options(contentType: 'multipart/form-data'),
+      ),
     );
     final body = response.data;
     if (body is Map<String, dynamic>) {

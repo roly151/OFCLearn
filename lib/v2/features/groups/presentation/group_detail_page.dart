@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_shell_page.dart';
+import '../../../app/v2_theme.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/ambient_scaffold.dart';
 import '../../../core/widgets/async_state_view.dart';
@@ -334,7 +335,7 @@ class _GroupFeedList extends StatelessWidget {
                       children: <Widget>[
                         CircleAvatar(
                           radius: 18,
-                          backgroundColor: const Color(0xFFD8E5E2),
+                          backgroundColor: V2Palette.navIndicator,
                           child: Text(
                             item.userName.isEmpty
                                 ? '?'
@@ -394,7 +395,7 @@ class _Tag extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFF1EEE6),
+        color: V2Palette.seaGlass,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(

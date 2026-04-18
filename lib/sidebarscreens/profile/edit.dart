@@ -1,9 +1,9 @@
 // ignore_for_file: non_constant_identifier_names, unused_import
 import 'dart:convert';
-import 'package:best_flutter_ui_templates/api/api.dart';
-import 'package:best_flutter_ui_templates/comman/custome_dialog.dart';
-import 'package:best_flutter_ui_templates/groups/feed.dart';
-import 'package:best_flutter_ui_templates/sidebarscreens/profile/profile.dart';
+import 'package:ofc_learn_v2/api/api.dart';
+import 'package:ofc_learn_v2/comman/custome_dialog.dart';
+import 'package:ofc_learn_v2/groups/feed.dart';
+import 'package:ofc_learn_v2/sidebarscreens/profile/profile.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
