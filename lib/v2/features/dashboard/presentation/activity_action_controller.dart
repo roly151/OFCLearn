@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/dependencies.dart';
 import '../../../core/domain/action_result.dart';
 import '../../../core/providers.dart';
+import 'dashboard_activity_feed_controller.dart';
 
 class ActivityActionController extends AsyncNotifier<void> {
   @override
@@ -15,7 +16,7 @@ class ActivityActionController extends AsyncNotifier<void> {
       () => repository.toggleFavorite(activityId),
     );
     state = result.whenData((_) {});
-    ref.invalidate(dashboardActivityProvider);
+    ref.invalidate(dashboardActivityFeedControllerProvider);
     ref.invalidate(activityCommentsProvider(activityId));
     return result.requireValue;
   }
@@ -35,7 +36,7 @@ class ActivityActionController extends AsyncNotifier<void> {
       ),
     );
     state = result.whenData((_) {});
-    ref.invalidate(dashboardActivityProvider);
+    ref.invalidate(dashboardActivityFeedControllerProvider);
     ref.invalidate(activityCommentsProvider(activityId));
     return result.requireValue;
   }
@@ -55,12 +56,12 @@ class ActivityActionController extends AsyncNotifier<void> {
       ),
     );
     state = result.whenData((_) {});
-    ref.invalidate(dashboardActivityProvider);
+    ref.invalidate(dashboardActivityFeedControllerProvider);
     return result.requireValue;
   }
 }
 
 final activityActionControllerProvider =
     AsyncNotifierProvider<ActivityActionController, void>(
-      ActivityActionController.new,
-    );
+  ActivityActionController.new,
+);

@@ -18,7 +18,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('OFC Learn v2'), findsOneWidget);
+    expect(find.text('OFCLearn'), findsOneWidget);
     expect(find.text('Sign in'), findsOneWidget);
     expect(find.text('Email or username'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);

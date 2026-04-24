@@ -51,6 +51,30 @@ class AuthRepository {
     );
   }
 
+  Future<void> requestPasswordReset({
+    required String email,
+  }) async {
+    await _apiClient.postMap(
+      '/auth/forgot-password',
+      data: <String, dynamic>{'user_email': email},
+    );
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    await _apiClient.postMap(
+      '/me/password',
+      data: <String, dynamic>{
+        'current_password': currentPassword,
+        'new_password': newPassword,
+        'confirm_password': confirmPassword,
+      },
+    );
+  }
+
   Future<ApiUser> fetchCurrentUser() async {
     final response = await _apiClient.getMap('/me');
     return ApiUser.fromJson(response);

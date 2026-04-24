@@ -13,6 +13,9 @@ class GroupDetail {
     required this.isMember,
     required this.imageLink,
     required this.forumId,
+    this.canPostToFeed = true,
+    this.activityFeedStatus = '',
+    this.parentId = 0,
   });
 
   final int id;
@@ -26,20 +29,29 @@ class GroupDetail {
   final bool isMember;
   final String imageLink;
   final int forumId;
+  final bool canPostToFeed;
+  final String activityFeedStatus;
+  final int parentId;
 
   factory GroupDetail.fromJson(Map<String, dynamic> json) {
     return GroupDetail(
       id: intValue(json['id']),
       type: stringValue(json['type']),
-      title: stringValue(json['Title']),
+      title: decodedTextValue(json['Title']),
       content: stringValue(json['Content']),
       status: stringValue(json['Status']),
       time: stringValue(json['Time']),
       organizerImage: stringValue(json['organizer_image']),
-      organizer: stringValue(json['organizer']),
+      organizer: decodedTextValue(json['organizer']),
       isMember: boolValue(json['Have_in_group']),
       imageLink: stringValue(json['Image_link']),
       forumId: intValue(json['forum_id']),
+      canPostToFeed: boolValue(
+        json['can_post'],
+        fallback: boolValue(json['canPost'], fallback: true),
+      ),
+      activityFeedStatus: stringValue(json['activity_feed_status']),
+      parentId: intValue(json['parent_id']),
     );
   }
 }

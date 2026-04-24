@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/v2_theme.dart';
 import '../../../core/widgets/section_card.dart';
@@ -56,6 +57,12 @@ class ProfilePage extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: () => context.push('/change-password'),
+          icon: const Icon(Icons.lock_reset_rounded),
+          label: const Text('Change password'),
+        ),
+        const SizedBox(height: 12),
         FilledButton.tonalIcon(
           onPressed: () => ref.read(authControllerProvider.notifier).logout(),
           icon: const Icon(Icons.logout_rounded),

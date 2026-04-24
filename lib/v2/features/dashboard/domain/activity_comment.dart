@@ -8,6 +8,7 @@ class ActivityComment {
     required this.authorName,
     required this.authorAvatarUrl,
     required this.content,
+    required this.contentHtml,
     required this.primaryLink,
   });
 
@@ -17,6 +18,7 @@ class ActivityComment {
   final String authorName;
   final String authorAvatarUrl;
   final String content;
+  final String contentHtml;
   final String primaryLink;
 
   String get initials {
@@ -36,18 +38,14 @@ class ActivityComment {
       id: intValue(json['comment_id']),
       parentCommentId: intValue(json['parent_comment_id']),
       depth: intValue(json['depth']),
-      authorName: stringValue(json['comment_owner_name'], fallback: 'Member'),
+      authorName: decodedTextValue(
+        json['comment_owner_name'],
+        fallback: 'Member',
+      ),
       authorAvatarUrl: stringValue(json['comment_owner_image_link']),
-      content: _stripHtml(stringValue(json['comment_content'])),
+      content: plainTextValue(json['comment_content']),
+      contentHtml: stringValue(json['comment_content']),
       primaryLink: stringValue(json['comment_primary_link']),
     );
-  }
-
-  static String _stripHtml(String html) {
-    return html
-        .replaceAll(RegExp(r'<[^>]*>'), ' ')
-        .replaceAll('&nbsp;', ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
   }
 }

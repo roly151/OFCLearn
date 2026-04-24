@@ -28,9 +28,9 @@ class GroupFeedItem {
   factory GroupFeedItem.fromJson(Map<String, dynamic> json) {
     return GroupFeedItem(
       id: intValue(json['id']),
-      userName: stringValue(json['user_name']),
+      userName: decodedTextValue(json['user_name']),
       type: stringValue(json['type']),
-      content: stringValue(json['content']),
+      content: plainTextValue(json['content']),
       primaryLink: stringValue(json['primary_link']),
       dateRecorded: stringValue(json['date_recorded']),
       imageLink: stringValue(json['image_link']),

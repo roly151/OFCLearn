@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class PageHeader extends StatelessWidget {
   const PageHeader({
     required this.title,
-    required this.subtitle,
+    this.subtitle = '',
     super.key,
   });
 
@@ -18,8 +18,10 @@ class PageHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(title, style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 6),
-          Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+          if (subtitle.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+          ],
         ],
       ),
     );

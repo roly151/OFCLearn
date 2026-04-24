@@ -23,7 +23,7 @@ class ActivityImageAttachment {
     return ActivityImageAttachment(
       id: intValue(json['id']),
       attachmentId: intValue(json['attachment_id']),
-      title: stringValue(json['title']),
+      title: decodedTextValue(json['title']),
       url: stringValue(json['url']),
       thumbUrl: stringValue(json['thumb_url']),
       fullUrl: stringValue(json['full_url']),
@@ -39,6 +39,7 @@ class ActivityDocumentAttachment {
     required this.title,
     required this.fileName,
     required this.url,
+    required this.previewUrl,
     required this.extension,
     required this.mimeType,
   });
@@ -48,18 +49,44 @@ class ActivityDocumentAttachment {
   final String title;
   final String fileName;
   final String url;
+  final String previewUrl;
   final String extension;
   final String mimeType;
 
   String get displayName => fileName.isNotEmpty ? fileName : title;
+  bool get hasVisualPreview => previewUrl.isNotEmpty;
+  bool get isImage {
+    final normalizedExtension = extension.toLowerCase();
+    final normalizedMimeType = mimeType.toLowerCase();
+    return normalizedMimeType.startsWith('image/') ||
+        const <String>{
+          'jpg',
+          'jpeg',
+          'png',
+          'gif',
+          'webp',
+          'heic',
+          'heif',
+        }.contains(normalizedExtension);
+  }
+
+  bool get isPdf {
+    final normalizedExtension = extension.toLowerCase();
+    final normalizedMimeType = mimeType.toLowerCase();
+    final normalizedUrl = url.toLowerCase();
+    return normalizedExtension == 'pdf' ||
+        normalizedMimeType == 'application/pdf' ||
+        normalizedUrl.endsWith('.pdf');
+  }
 
   factory ActivityDocumentAttachment.fromJson(Map<String, dynamic> json) {
     return ActivityDocumentAttachment(
       id: intValue(json['id']),
       attachmentId: intValue(json['attachment_id']),
-      title: stringValue(json['title']),
-      fileName: stringValue(json['file_name']),
+      title: decodedTextValue(json['title']),
+      fileName: decodedTextValue(json['file_name']),
       url: stringValue(json['url']),
+      previewUrl: stringValue(json['preview_url']),
       extension: stringValue(json['extension']),
       mimeType: stringValue(json['mime_type']),
     );

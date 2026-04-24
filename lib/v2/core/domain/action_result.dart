@@ -15,7 +15,7 @@ class ActionResult {
   }) {
     return ActionResult(
       message: stringValue(json['message'], fallback: fallbackMessage),
-      success: true,
+      success: boolValue(json['success'], fallback: true),
     );
   }
 }

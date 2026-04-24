@@ -28,9 +28,9 @@ class CourseSummary {
   factory CourseSummary.fromJson(Map<String, dynamic> json) {
     return CourseSummary(
       id: intValue(json['id']),
-      title: stringValue(json['post_title']),
-      excerpt: stringValue(json['post_excerpt']),
-      authorName: stringValue(json['post_author_name']),
+      title: decodedTextValue(json['post_title']),
+      excerpt: plainTextValue(json['post_excerpt']),
+      authorName: decodedTextValue(json['post_author_name']),
       status: stringValue(json['post_status']),
       slug: stringValue(json['post_name']),
       type: stringValue(json['post_type']),

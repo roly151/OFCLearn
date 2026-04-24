@@ -4,6 +4,7 @@ class GroupSummary {
   const GroupSummary({
     required this.id,
     required this.title,
+    required this.description,
     required this.type,
     required this.statusLabel,
     required this.createdOn,
@@ -11,10 +12,12 @@ class GroupSummary {
     required this.authorImageUrl,
     required this.organizerName,
     required this.isMember,
+    this.parentId = 0,
   });
 
   final int id;
   final String title;
+  final String description;
   final String type;
   final String statusLabel;
   final String createdOn;
@@ -22,18 +25,21 @@ class GroupSummary {
   final String authorImageUrl;
   final String organizerName;
   final bool isMember;
+  final int parentId;
 
   factory GroupSummary.fromJson(Map<String, dynamic> json) {
     return GroupSummary(
       id: intValue(json['id']),
-      title: stringValue(json['Title']),
+      title: decodedTextValue(json['Title']),
+      description: decodedTextValue(json['Description']),
       type: stringValue(json['type']),
       statusLabel: stringValue(json['Status']),
       createdOn: stringValue(json['Time']),
       imageUrl: stringValue(json['Image_link']),
       authorImageUrl: stringValue(json['author_image']),
-      organizerName: stringValue(json['user_name']),
+      organizerName: decodedTextValue(json['user_name']),
       isMember: boolValue(json['Have_in_group']),
+      parentId: intValue(json['parent_id']),
     );
   }
 }

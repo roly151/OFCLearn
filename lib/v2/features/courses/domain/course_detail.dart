@@ -29,10 +29,10 @@ class CourseDetail {
 
   factory CourseDetail.fromJson(Map<String, dynamic> json) {
     return CourseDetail(
-      authorName: stringValue(json['display_name']),
+      authorName: decodedTextValue(json['display_name']),
       date: stringValue(json['course_date']),
-      title: stringValue(json['course_title']),
-      excerpt: stringValue(json['course_excerpt']),
+      title: decodedTextValue(json['course_title']),
+      excerpt: plainTextValue(json['course_excerpt']),
       slug: stringValue(json['course_name']),
       type: stringValue(json['course_type']),
       status: stringValue(json['course_status']),

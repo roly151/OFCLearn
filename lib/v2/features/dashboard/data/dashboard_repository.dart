@@ -7,20 +7,28 @@ import '../domain/activity_feed_item.dart';
 
 class DashboardRepository {
   static const int _ofcLearnSiteId = 1;
+  static const int activityPageSize = 20;
 
   const DashboardRepository(this._apiClient);
 
   final ApiClient _apiClient;
 
-  Future<List<ActivityFeedItem>> fetchActivityFeed({
-    String scope = 'just-me',
+  Future<DashboardActivityFeedPage> fetchActivityFeedPage({
+    int page = 1,
+    String scope = 'all',
   }) async {
-    final response = await _apiClient.getList('/activity?scope=$scope');
-    return response
+    final response =
+        await _apiClient.getList('/activity?scope=$scope&page=$page');
+    final items = response
         .whereType<Map<String, dynamic>>()
         .map(ActivityFeedItem.fromJson)
         .where((item) => item.sourceBlogId == _ofcLearnSiteId)
         .toList(growable: false);
+
+    return DashboardActivityFeedPage(
+      items: items,
+      hasMore: response.length >= activityPageSize,
+    );
   }
 
   Future<List<ActivityComment>> fetchComments(int activityId) async {
@@ -115,4 +123,14 @@ class DashboardRepository {
     final segments = normalized.split('/');
     return segments.isEmpty ? path : segments.last;
   }
+}
+
+class DashboardActivityFeedPage {
+  const DashboardActivityFeedPage({
+    required this.items,
+    required this.hasMore,
+  });
+
+  final List<ActivityFeedItem> items;
+  final bool hasMore;
 }

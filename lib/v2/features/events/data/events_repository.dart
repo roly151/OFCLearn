@@ -24,10 +24,19 @@ class EventsRepository {
         .toList(growable: false);
   }
 
+  Future<List<EventSummary>> fetchRecordedEvents() async {
+    final response = await _apiClient.getList('/events/recorded');
+    return response
+        .whereType<Map<String, dynamic>>()
+        .map(EventSummary.fromJson)
+        .toList(growable: false);
+  }
+
   Future<EventDetail> fetchEventDetail(int eventId) async {
     final responses = await Future.wait<List<dynamic>>(<Future<List<dynamic>>>[
       _apiClient.getList('/events/upcoming'),
       _apiClient.getList('/events/previous'),
+      _apiClient.getList('/events/recorded'),
     ]);
 
     for (final response in responses) {

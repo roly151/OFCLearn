@@ -34,18 +34,21 @@ class EventDetail {
   factory EventDetail.fromJson(Map<String, dynamic> json) {
     return EventDetail(
       id: intValue(json['ID']),
-      authorName: stringValue(json['display_name']),
+      authorName: decodedTextValue(json['display_name']),
       startDate: stringValue(json['event_start_date']),
       endDate: stringValue(json['event_end_date']),
-      title: stringValue(json['event_title']),
-      excerpt: stringValue(json['event_excerpt']),
+      title: decodedTextValue(json['event_title']),
+      excerpt: plainTextValue(json['event_excerpt']),
       slug: stringValue(json['event_name']),
       type: stringValue(json['event_type']),
       status: stringValue(json['event_status']),
       content: stringValue(json['event_content']),
       thumbnailImageUrl: stringValue(json['event_thumbnail_image_link']),
       link: stringValue(json['event_link']),
-      ervLink: stringValue(json['erv_link']),
+      ervLink: stringValue(
+        json['recording_link'],
+        fallback: stringValue(json['erv_link']),
+      ),
     );
   }
 }

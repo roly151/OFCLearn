@@ -9,6 +9,7 @@ import '../features/courses/data/courses_repository.dart';
 import '../features/dashboard/data/dashboard_repository.dart';
 import '../features/events/data/events_repository.dart';
 import '../features/groups/data/groups_repository.dart';
+import '../features/library/data/library_repository.dart';
 
 final appConfigProvider = Provider<AppConfig>((ref) {
   return AppConfig.fromEnvironment();
@@ -44,7 +45,10 @@ final coursesRepositoryProvider = Provider<CoursesRepository>((ref) {
 });
 
 final groupsRepositoryProvider = Provider<GroupsRepository>((ref) {
-  return GroupsRepository(ref.watch(apiClientProvider));
+  return GroupsRepository(
+    ref.watch(apiClientProvider),
+    wpJsonBaseUrl: ref.watch(appConfigProvider).wpJsonBaseUrl,
+  );
 });
 
 final eventsRepositoryProvider = Provider<EventsRepository>((ref) {
@@ -53,4 +57,8 @@ final eventsRepositoryProvider = Provider<EventsRepository>((ref) {
 
 final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
   return DashboardRepository(ref.watch(apiClientProvider));
+});
+
+final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
+  return LibraryRepository(ref.watch(apiClientProvider));
 });

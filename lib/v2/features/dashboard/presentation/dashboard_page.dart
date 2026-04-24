@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:internet_file/internet_file.dart';
+import 'package:pdfx/pdfx.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/app_config.dart';
@@ -12,51 +17,150 @@ import '../../../core/widgets/section_card.dart';
 import '../../../app/v2_theme.dart';
 import '../../auth/presentation/auth_controller.dart';
 import 'activity_action_controller.dart';
+import 'dashboard_activity_feed_controller.dart';
 import '../domain/activity_comment.dart';
 import '../domain/activity_attachment.dart';
 import '../domain/activity_feed_item.dart';
 
-class DashboardPage extends ConsumerWidget {
+final dashboardResumeRefreshThresholdProvider = Provider<Duration>((
+  ref,
+) {
+  return const Duration(minutes: 5);
+});
+
+final dashboardNowProvider = Provider<DateTime Function()>((ref) {
+  return DateTime.now;
+});
+
+class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends ConsumerState<DashboardPage>
+    with WidgetsBindingObserver {
+  late final ScrollController _scrollController;
+  DateTime? _backgroundedAt;
+  bool _skipNextResumeRefresh = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()..addListener(_handleScroll);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+        _backgroundedAt ??= ref.read(dashboardNowProvider)();
+      case AppLifecycleState.resumed:
+        final now = ref.read(dashboardNowProvider)();
+        final threshold = ref.read(dashboardResumeRefreshThresholdProvider);
+        final backgroundedAt = _backgroundedAt;
+        _backgroundedAt = null;
+
+        if (_skipNextResumeRefresh) {
+          _skipNextResumeRefresh = false;
+          return;
+        }
+
+        if (backgroundedAt != null &&
+            now.difference(backgroundedAt) >= threshold &&
+            mounted) {
+          unawaited(_refreshActivityFeed());
+        }
+      case AppLifecycleState.detached:
+        break;
+    }
+  }
+
+  Future<void> _refreshActivityFeed() async {
+    await ref.read(dashboardActivityFeedControllerProvider.notifier).refresh();
+  }
+
+  void _markExternalAttachmentOpened() {
+    _skipNextResumeRefresh = true;
+  }
+
+  void _clearExternalAttachmentSkip() {
+    _skipNextResumeRefresh = false;
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    if (position.pixels < position.maxScrollExtent - 240) {
+      return;
+    }
+
+    unawaited(
+      ref.read(dashboardActivityFeedControllerProvider.notifier).loadMore(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final session = ref.watch(authControllerProvider).asData?.value;
-    final activityFeed = ref.watch(dashboardActivityProvider);
+    final activityFeed = ref.watch(dashboardActivityFeedControllerProvider);
     final config = ref.watch(appConfigProvider);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
-      children: <Widget>[
-        Text(
-          'Good to see you, ${session?.user.displayName.isNotEmpty == true ? session!.user.displayName : session?.user.username ?? 'coach'}.',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Your dashboard now surfaces the BuddyBoss activity feed from the live API.',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'Activity',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 12),
-        const _ActivityComposer(),
-        const SizedBox(height: 16),
-        activityFeed.when(
-          data: (items) => _ActivityFeedList(items: items, config: config),
-          error: (error, _) => AsyncStateView(
-            message: error.toString(),
-            onRetry: () => ref.invalidate(dashboardActivityProvider),
+    return RefreshIndicator(
+      onRefresh: _refreshActivityFeed,
+      child: ListView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
+        children: <Widget>[
+          Text(
+            'Good to see you, ${session?.user.displayName.isNotEmpty == true ? session!.user.displayName : session?.user.username ?? 'coach'}.',
+            style: Theme.of(context).textTheme.headlineMedium,
           ),
-          loading: () => const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
+          const SizedBox(height: 20),
+          Text(
+            'Activity',
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-        ),
-      ],
+          const SizedBox(height: 12),
+          const _ActivityComposer(),
+          const SizedBox(height: 16),
+          activityFeed.when(
+            data: (feedState) => _ActivityFeedList(
+              items: feedState.items,
+              config: config,
+              isLoadingMore: feedState.isLoadingMore,
+              onOpenExternalAttachment: _markExternalAttachmentOpened,
+              onExternalAttachmentOpenFailed: _clearExternalAttachmentSkip,
+            ),
+            error: (error, _) => AsyncStateView(
+              message: error.toString(),
+              onRetry: () =>
+                  ref.invalidate(dashboardActivityFeedControllerProvider),
+            ),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -182,7 +286,8 @@ class _ActivityComposerState extends ConsumerState<_ActivityComposer> {
               hintText: 'Share an update with the community...',
             ),
           ),
-          if (_selectedImages.isNotEmpty || _selectedDocuments.isNotEmpty) ...<Widget>[
+          if (_selectedImages.isNotEmpty ||
+              _selectedDocuments.isNotEmpty) ...<Widget>[
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -294,10 +399,16 @@ class _ActivityFeedList extends StatelessWidget {
   const _ActivityFeedList({
     required this.items,
     required this.config,
+    required this.onOpenExternalAttachment,
+    required this.onExternalAttachmentOpenFailed,
+    this.isLoadingMore = false,
   });
 
   final List<ActivityFeedItem> items;
   final AppConfig config;
+  final VoidCallback onOpenExternalAttachment;
+  final VoidCallback onExternalAttachmentOpenFailed;
+  final bool isLoadingMore;
 
   @override
   Widget build(BuildContext context) {
@@ -309,14 +420,24 @@ class _ActivityFeedList extends StatelessWidget {
     }
 
     return Column(
-      children: items
-          .map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: _ActivityCard(item: item, config: config),
+      children: <Widget>[
+        ...items.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: _ActivityCard(
+              item: item,
+              config: config,
+              onOpenExternalAttachment: onOpenExternalAttachment,
+              onExternalAttachmentOpenFailed: onExternalAttachmentOpenFailed,
             ),
-          )
-          .toList(growable: false),
+          ),
+        ),
+        if (isLoadingMore)
+          const Padding(
+            padding: EdgeInsets.only(top: 4, bottom: 20),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+      ],
     );
   }
 }
@@ -325,10 +446,14 @@ class _ActivityCard extends ConsumerStatefulWidget {
   const _ActivityCard({
     required this.item,
     required this.config,
+    required this.onOpenExternalAttachment,
+    required this.onExternalAttachmentOpenFailed,
   });
 
   final ActivityFeedItem item;
   final AppConfig config;
+  final VoidCallback onOpenExternalAttachment;
+  final VoidCallback onExternalAttachmentOpenFailed;
 
   @override
   ConsumerState<_ActivityCard> createState() => _ActivityCardState();
@@ -366,6 +491,8 @@ class _ActivityCardState extends ConsumerState<_ActivityCard> {
   @override
   Widget build(BuildContext context) {
     ref.watch(activityActionControllerProvider);
+    final preview = widget.item.preview;
+    final hasLinkedPreview = preview != null && preview.hasContent;
 
     Future<void> onToggleLike() async {
       if (_likeRequestInFlight) {
@@ -457,7 +584,11 @@ class _ActivityCardState extends ConsumerState<_ActivityCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      widget.item.name.isEmpty ? 'Member' : widget.item.name,
+                      widget.item.action.isNotEmpty
+                          ? widget.item.action
+                          : (widget.item.name.isEmpty
+                              ? 'Member activity'
+                              : widget.item.name),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 2),
@@ -471,12 +602,27 @@ class _ActivityCardState extends ConsumerState<_ActivityCard> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            widget.item.contentStripped.isEmpty
-                ? 'No activity text available.'
-                : widget.item.contentStripped,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
+          if (widget.item.contentStripped.isNotEmpty)
+            Text(
+              widget.item.contentStripped,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          if (hasLinkedPreview) ...<Widget>[
+            if (widget.item.contentStripped.isNotEmpty)
+              const SizedBox(height: 12),
+            _ActivityLinkedPreview(
+              item: preview,
+              config: widget.config,
+              parentTab: 'dashboard',
+              onOpenExternalAttachment: widget.onOpenExternalAttachment,
+              onExternalAttachmentOpenFailed:
+                  widget.onExternalAttachmentOpenFailed,
+            ),
+          ] else if (widget.item.contentStripped.isEmpty)
+            Text(
+              'No activity text available.',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
           if (widget.item.mediaItems.isNotEmpty) ...<Widget>[
             const SizedBox(height: 12),
             _ActivityMediaPreview(
@@ -489,6 +635,9 @@ class _ActivityCardState extends ConsumerState<_ActivityCard> {
             _ActivityDocumentPreview(
               items: widget.item.documentItems,
               config: widget.config,
+              onOpenExternalAttachment: widget.onOpenExternalAttachment,
+              onExternalAttachmentOpenFailed:
+                  widget.onExternalAttachmentOpenFailed,
             ),
           ],
           if (widget.item.groupName.isNotEmpty) ...<Widget>[
@@ -513,6 +662,117 @@ class _ActivityCardState extends ConsumerState<_ActivityCard> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ActivityLinkedPreview extends StatelessWidget {
+  const _ActivityLinkedPreview({
+    required this.item,
+    required this.config,
+    required this.parentTab,
+    required this.onOpenExternalAttachment,
+    required this.onExternalAttachmentOpenFailed,
+  });
+
+  final ActivityPostPreview item;
+  final AppConfig config;
+  final String parentTab;
+  final VoidCallback onOpenExternalAttachment;
+  final VoidCallback onExternalAttachmentOpenFailed;
+
+  Future<void> _openPreview(BuildContext context) async {
+    if (_isLibraryPost) {
+      context.go('/app/$parentTab/post/${item.postId}');
+      return;
+    }
+
+    final resolvedUrl = config.resolveMediaUrl(item.link);
+    final uri = Uri.tryParse(resolvedUrl);
+    if (uri == null) {
+      return;
+    }
+
+    onOpenExternalAttachment();
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      onExternalAttachmentOpenFailed();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open preview.')),
+      );
+    }
+  }
+
+  bool get _isLibraryPost =>
+      item.postId > 0 &&
+      (item.postType.toLowerCase() == 'post' ||
+          item.postType.toLowerCase() == 'library');
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedImageUrl = config.resolveMediaUrl(item.imageUrl);
+
+    return Material(
+      color: V2Palette.surface,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: (item.link.isEmpty && !_isLibraryPost)
+            ? null
+            : () => _openPreview(context),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: V2Palette.cardBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (resolvedImageUrl.isNotEmpty)
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(22),
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: 1.65,
+                    child: Image.network(
+                      resolvedImageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: V2Palette.mist,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.broken_image_outlined),
+                      ),
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    if (item.title.isNotEmpty)
+                      Text(
+                        item.title,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(color: V2Palette.primaryBlue),
+                      ),
+                    if (item.title.isNotEmpty && item.excerpt.isNotEmpty)
+                      const SizedBox(height: 10),
+                    if (item.excerpt.isNotEmpty)
+                      Text(
+                        item.excerpt,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -550,23 +810,170 @@ class _ActivityMediaPreview extends StatelessWidget {
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(20),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: V2Palette.mist,
-              border: Border.all(color: V2Palette.cardBorder),
+          child: Material(
+            color: V2Palette.mist,
+            child: InkWell(
+              onTap: imageUrl.isEmpty
+                  ? null
+                  : () => _openImageViewer(context, previewItems, index),
+              child: Ink(
+                decoration: BoxDecoration(
+                  color: V2Palette.mist,
+                  border: Border.all(color: V2Palette.cardBorder),
+                ),
+                child: imageUrl.isEmpty
+                    ? const Center(child: Icon(Icons.image_outlined))
+                    : Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(Icons.broken_image_outlined),
+                        ),
+                      ),
+              ),
             ),
-            child: imageUrl.isEmpty
-                ? const Center(child: Icon(Icons.image_outlined))
-                : Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Center(
-                      child: Icon(Icons.broken_image_outlined),
-                    ),
-                  ),
           ),
         );
       },
+    );
+  }
+
+  Future<void> _openImageViewer(
+    BuildContext context,
+    List<ActivityImageAttachment> items,
+    int initialIndex,
+  ) async {
+    await Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        opaque: false,
+        barrierColor: Colors.black,
+        pageBuilder: (_, __, ___) => _ActivityImageViewerSheet(
+          items: items,
+          config: config,
+          initialIndex: initialIndex,
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivityImageViewerSheet extends StatefulWidget {
+  const _ActivityImageViewerSheet({
+    required this.items,
+    required this.config,
+    required this.initialIndex,
+  });
+
+  final List<ActivityImageAttachment> items;
+  final AppConfig config;
+  final int initialIndex;
+
+  @override
+  State<_ActivityImageViewerSheet> createState() =>
+      _ActivityImageViewerSheetState();
+}
+
+class _ActivityImageViewerSheetState extends State<_ActivityImageViewerSheet> {
+  late final PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          children: <Widget>[
+            PageView.builder(
+              controller: _pageController,
+              itemCount: widget.items.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                final item = widget.items[index];
+                final imageUrl = widget.config.resolveMediaUrl(
+                  item.fullUrl.isNotEmpty ? item.fullUrl : item.thumbUrl,
+                );
+
+                return InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 4,
+                  child: Center(
+                    child: imageUrl.isEmpty
+                        ? const Icon(
+                            Icons.broken_image_outlined,
+                            color: Colors.white,
+                            size: 36,
+                          )
+                        : Image.network(
+                            imageUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.broken_image_outlined,
+                              color: Colors.white,
+                              size: 36,
+                            ),
+                          ),
+                  ),
+                );
+              },
+            ),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: IconButton.filledTonal(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.14),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+            if (widget.items.length > 1)
+              Positioned(
+                top: 18,
+                right: 16,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      '${_currentIndex + 1} / ${widget.items.length}',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -575,10 +982,14 @@ class _ActivityDocumentPreview extends StatelessWidget {
   const _ActivityDocumentPreview({
     required this.items,
     required this.config,
+    required this.onOpenExternalAttachment,
+    required this.onExternalAttachmentOpenFailed,
   });
 
   final List<ActivityDocumentAttachment> items;
   final AppConfig config;
+  final VoidCallback onOpenExternalAttachment;
+  final VoidCallback onExternalAttachmentOpenFailed;
 
   Future<void> _openDocument(BuildContext context, String url) async {
     final resolvedUrl = config.resolveMediaUrl(url);
@@ -587,19 +998,90 @@ class _ActivityDocumentPreview extends StatelessWidget {
       return;
     }
 
+    onOpenExternalAttachment();
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
+      onExternalAttachmentOpenFailed();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Unable to open document.')));
     }
   }
 
+  Future<void> _openPdfDocument(
+    BuildContext context,
+    ActivityDocumentAttachment item,
+  ) async {
+    final resolvedUrl = config.resolveMediaUrl(
+      item.url.isNotEmpty ? item.url : item.previewUrl,
+    );
+    if (resolvedUrl.isEmpty) {
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _ActivityPdfViewerPage(
+          title: item.displayName,
+          url: resolvedUrl,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openImageDocumentViewer(
+    BuildContext context,
+    ActivityDocumentAttachment item,
+  ) async {
+    final imageAttachment = ActivityImageAttachment(
+      id: item.id,
+      attachmentId: item.attachmentId,
+      title: item.title,
+      url: item.url,
+      thumbUrl: item.previewUrl,
+      fullUrl: item.url.isNotEmpty ? item.url : item.previewUrl,
+      mimeType: item.mimeType,
+    );
+
+    await Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        opaque: false,
+        barrierColor: Colors.black,
+        pageBuilder: (_, __, ___) => _ActivityImageViewerSheet(
+          items: <ActivityImageAttachment>[imageAttachment],
+          config: config,
+          initialIndex: 0,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final previewItems =
+        items.where((item) => item.hasVisualPreview).toList(growable: false);
+    final fileItems =
+        items.where((item) => !item.hasVisualPreview).toList(growable: false);
+
     return Column(
-      children: items
-          .map(
+      children: <Widget>[
+        if (previewItems.isNotEmpty)
+          ...previewItems.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _ActivityDocumentImagePreview(
+                item: item,
+                config: config,
+                onOpenDocument: item.isPdf
+                    ? (_) => _openPdfDocument(context, item)
+                    : item.isImage
+                        ? (_) => _openImageDocumentViewer(context, item)
+                        : (url) => _openDocument(context, url),
+              ),
+            ),
+          ),
+        if (fileItems.isNotEmpty)
+          ...fileItems.map(
             (item) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Material(
@@ -607,7 +1089,13 @@ class _ActivityDocumentPreview extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(18),
-                  onTap: item.url.isEmpty ? null : () => _openDocument(context, item.url),
+                  onTap: item.url.isEmpty
+                      ? null
+                      : () => item.isPdf
+                          ? _openPdfDocument(context, item)
+                          : item.isImage
+                              ? _openImageDocumentViewer(context, item)
+                              : _openDocument(context, item.url),
                   child: Ink(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -657,8 +1145,116 @@ class _ActivityDocumentPreview extends StatelessWidget {
                 ),
               ),
             ),
-          )
-          .toList(growable: false),
+          ),
+      ],
+    );
+  }
+}
+
+class _ActivityPdfViewerPage extends StatefulWidget {
+  const _ActivityPdfViewerPage({
+    required this.title,
+    required this.url,
+  });
+
+  final String title;
+  final String url;
+
+  @override
+  State<_ActivityPdfViewerPage> createState() => _ActivityPdfViewerPageState();
+}
+
+class _ActivityPdfViewerPageState extends State<_ActivityPdfViewerPage> {
+  late final PdfControllerPinch _pdfController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pdfController = PdfControllerPinch(
+      document: PdfDocument.openData(InternetFile.get(widget.url)),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pdfController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      body: PdfViewPinch(
+        controller: _pdfController,
+        builders: PdfViewPinchBuilders<DefaultBuilderOptions>(
+          options: const DefaultBuilderOptions(),
+          documentLoaderBuilder: (_) =>
+              const Center(child: CircularProgressIndicator()),
+          pageLoaderBuilder: (_) =>
+              const Center(child: CircularProgressIndicator()),
+          errorBuilder: (_, error) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Unable to open PDF.\n$error'),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivityDocumentImagePreview extends StatelessWidget {
+  const _ActivityDocumentImagePreview({
+    required this.item,
+    required this.config,
+    required this.onOpenDocument,
+  });
+
+  final ActivityDocumentAttachment item;
+  final AppConfig config;
+  final Future<void> Function(String url) onOpenDocument;
+
+  @override
+  Widget build(BuildContext context) {
+    final previewUrl = config.resolveMediaUrl(item.previewUrl);
+    final openUrl = item.url.isNotEmpty ? item.url : item.previewUrl;
+
+    return Material(
+      color: V2Palette.surface,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: openUrl.isEmpty ? null : () => onOpenDocument(openUrl),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: V2Palette.cardBorder),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: AspectRatio(
+              aspectRatio: 1.6,
+              child: previewUrl.isEmpty
+                  ? const Center(child: Icon(Icons.image_outlined))
+                  : Image.network(
+                      previewUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Center(
+                        child: Icon(Icons.broken_image_outlined),
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -700,9 +1296,8 @@ class _ActionPillButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final background = active ? V2Palette.foliage : V2Palette.seaGlass;
-    final foreground = active
-        ? theme.colorScheme.onPrimary
-        : theme.colorScheme.onSurface;
+    final foreground =
+        active ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
 
     return Material(
       color: background,
@@ -805,7 +1400,8 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final commentsState = ref.watch(activityCommentsProvider(widget.activity.id));
+    final commentsState =
+        ref.watch(activityCommentsProvider(widget.activity.id));
     final actionState = ref.watch(activityActionControllerProvider);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
@@ -854,14 +1450,16 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                   final commentsByParent = <int, List<ActivityComment>>{};
                   for (final comment in comments) {
                     commentsByParent
-                        .putIfAbsent(comment.parentCommentId, () => <ActivityComment>[])
+                        .putIfAbsent(
+                            comment.parentCommentId, () => <ActivityComment>[])
                         .add(comment);
                   }
 
                   final commentById = <int, ActivityComment>{
                     for (final comment in comments) comment.id: comment,
                   };
-                  final commentIds = comments.map((comment) => comment.id).toSet();
+                  final commentIds =
+                      comments.map((comment) => comment.id).toSet();
                   final topLevelComments = comments.where((comment) {
                     return comment.depth == 0 ||
                         comment.parentCommentId == 0 ||
@@ -880,7 +1478,8 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                     return current.id;
                   }
 
-                  final descendantRepliesByTopLevel = <int, List<ActivityComment>>{};
+                  final descendantRepliesByTopLevel =
+                      <int, List<ActivityComment>>{};
                   for (final comment in comments) {
                     final ancestorId = topLevelAncestorId(comment);
                     if (ancestorId == comment.id) {
@@ -897,7 +1496,8 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                       comment: topLevelComments[index],
                       config: widget.config,
                       commentById: commentById,
-                      replies: descendantRepliesByTopLevel[topLevelComments[index].id] ??
+                      replies: descendantRepliesByTopLevel[
+                              topLevelComments[index].id] ??
                           const <ActivityComment>[],
                       expandedCommentIds: _expandedCommentIds,
                       onReply: (comment) {
@@ -984,7 +1584,8 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                       ),
                       const SizedBox(width: 10),
                       FilledButton(
-                        onPressed: actionState.isLoading ? null : _submitComment,
+                        onPressed:
+                            actionState.isLoading ? null : _submitComment,
                         child: Text(_replyTarget == null ? 'Comment' : 'Reply'),
                       ),
                     ],
@@ -1022,9 +1623,8 @@ class _CommentThreadTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasReplies = replies.isNotEmpty;
     final isExpanded = expandedCommentIds.contains(comment.id);
-    final replyLabel = replies.length == 1
-        ? 'View 1 reply'
-        : 'View ${replies.length} replies';
+    final replyLabel =
+        replies.length == 1 ? 'View 1 reply' : 'View ${replies.length} replies';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1057,8 +1657,8 @@ class _CommentThreadTile extends StatelessWidget {
                     Text(
                       isExpanded ? 'Hide replies' : replyLabel,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: V2Palette.primaryBlue,
-                      ),
+                            color: V2Palette.primaryBlue,
+                          ),
                     ),
                   ],
                 ),
@@ -1141,14 +1741,15 @@ class _CommentTile extends StatelessWidget {
                     comment.authorName,
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
-                  if (replyToName != null && replyToName!.isNotEmpty) ...<Widget>[
+                  if (replyToName != null &&
+                      replyToName!.isNotEmpty) ...<Widget>[
                     const SizedBox(height: 2),
                     Text(
                       'Replying to $replyToName',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: V2Palette.primaryBlue,
-                        fontWeight: FontWeight.w600,
-                      ),
+                            color: V2Palette.primaryBlue,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                   ],
                   const SizedBox(height: 4),
@@ -1168,8 +1769,8 @@ class _CommentTile extends StatelessWidget {
                       child: Text(
                         'Reply',
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: V2Palette.primaryBlue,
-                        ),
+                              color: V2Palette.primaryBlue,
+                            ),
                       ),
                     ),
                   ),

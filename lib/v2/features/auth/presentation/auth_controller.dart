@@ -26,6 +26,24 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     );
   }
 
+  Future<void> requestPasswordReset({
+    required String email,
+  }) {
+    return ref.read(authRepositoryProvider).requestPasswordReset(email: email);
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) {
+    return ref.read(authRepositoryProvider).changePassword(
+          currentPassword: currentPassword,
+          newPassword: newPassword,
+          confirmPassword: confirmPassword,
+        );
+  }
+
   Future<void> refreshProfile() async {
     final current = state.asData?.value;
     if (current == null) {

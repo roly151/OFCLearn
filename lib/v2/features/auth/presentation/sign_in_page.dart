@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/v2_theme.dart';
 import '../../../core/widgets/ambient_scaffold.dart';
@@ -52,20 +53,23 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.88),
+                    color: V2Palette.primaryBlue,
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: V2Palette.cardBorder),
+                    border: Border.all(color: V2Palette.primaryBlue),
                   ),
-                  child: const Text('OFC Learn v2'),
+                  child: const Text(
+                    'OFCLearn',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'A cleaner client for courses, groups, events, and identity.',
+                  'A Community of Learning',
                   style: Theme.of(context).textTheme.headlineLarge,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'This v2 branch talks directly to the new `ofc-mobile/v1` API with typed models, secure token storage, and a migration-ready feature structure.',
+                  'OFC Learn is for anyone in football looking to grow their knowledge, sharpen their skills, and make a greater impact on the game.',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 24),
@@ -145,6 +149,16 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                                         strokeWidth: 2),
                                   )
                                 : const Text('Continue'),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: authState.isLoading
+                                ? null
+                                : () => context.push('/forgot-password'),
+                            child: const Text('Forgot password?'),
                           ),
                         ),
                       ],

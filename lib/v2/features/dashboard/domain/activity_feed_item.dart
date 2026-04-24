@@ -7,6 +7,7 @@ class ActivityFeedItem {
     required this.userId,
     required this.sourceBlogId,
     required this.name,
+    required this.action,
     required this.component,
     required this.contentRendered,
     required this.contentStripped,
@@ -27,6 +28,7 @@ class ActivityFeedItem {
     required this.groupAvatar,
     required this.avatarFullUrl,
     required this.avatarThumbUrl,
+    required this.preview,
     required this.mediaItems,
     required this.documentItems,
   });
@@ -35,6 +37,7 @@ class ActivityFeedItem {
   final int userId;
   final int sourceBlogId;
   final String name;
+  final String action;
   final String component;
   final String contentRendered;
   final String contentStripped;
@@ -55,6 +58,7 @@ class ActivityFeedItem {
   final String groupAvatar;
   final String avatarFullUrl;
   final String avatarThumbUrl;
+  final ActivityPostPreview? preview;
   final List<ActivityImageAttachment> mediaItems;
   final List<ActivityDocumentAttachment> documentItems;
 
@@ -73,7 +77,8 @@ class ActivityFeedItem {
   factory ActivityFeedItem.fromJson(Map<String, dynamic> json) {
     final content = json['content'];
     final activityData = json['activity_data'];
-    final avatarUrls = json['avatar_urls'];
+    final avatarUrls = json['avatar_urls'] ?? json['user_avatar'];
+    final previewData = json['preview_data'];
     final mediaItems = json['media_items'];
     final documentItems = json['document_items'];
 
@@ -81,21 +86,41 @@ class ActivityFeedItem {
       id: intValue(json['id']),
       userId: intValue(json['user_id']),
       sourceBlogId: _sourceBlogIdFromJson(json),
-      name: stringValue(json['name']),
+      name: decodedTextValue(
+        json['name'],
+        fallback: decodedTextValue(json['user_name']),
+      ),
+      action: _normalizedActionText(decodedTextValue(json['action'])),
       component: stringValue(json['component']),
       contentRendered: content is Map<String, dynamic>
           ? stringValue(content['rendered'])
-          : '',
-      contentStripped: stringValue(json['content_stripped']),
-      date: stringValue(json['date']),
-      link: stringValue(json['link']),
+          : stringValue(content),
+      contentStripped: plainTextValue(
+        json['content_stripped'],
+        fallback: plainTextValue(json['content']),
+      ),
+      date: stringValue(json['date'],
+          fallback: stringValue(json['date_recorded'])),
+      link: stringValue(
+        json['link'],
+        fallback: stringValue(json['primary_link']),
+      ),
       primaryItemId: intValue(json['primary_item_id']),
       secondaryItemId: intValue(json['secondary_item_id']),
       status: stringValue(json['status']),
       type: stringValue(json['type']),
-      favorited: boolValue(json['favorited']),
-      favoriteCount: intValue(json['favorite_count']),
-      commentCount: intValue(json['comment_count']),
+      favorited: boolValue(
+        json['favorited'],
+        fallback: boolValue(json['like_c_user']),
+      ),
+      favoriteCount: intValue(
+        json['favorite_count'],
+        fallback: intValue(json['like_count']),
+      ),
+      commentCount: intValue(
+        json['comment_count'],
+        fallback: intValue(json['total_comment']),
+      ),
       canEdit: boolValue(json['can_edit']),
       canDelete: boolValue(json['can_delete']),
       privacy: stringValue(json['privacy']),
@@ -103,28 +128,37 @@ class ActivityFeedItem {
           ? intValue(activityData['group_id'])
           : 0,
       groupName: activityData is Map<String, dynamic>
-          ? stringValue(activityData['group_name'])
+          ? decodedTextValue(activityData['group_name'])
           : '',
       groupAvatar: activityData is Map<String, dynamic>
           ? stringValue(activityData['group_avatar'])
           : '',
       avatarFullUrl: avatarUrls is Map<String, dynamic>
-          ? stringValue(avatarUrls['full'])
-          : '',
+          ? stringValue(
+              avatarUrls['full'],
+              fallback: stringValue(json['image_link']),
+            )
+          : stringValue(json['image_link']),
       avatarThumbUrl: avatarUrls is Map<String, dynamic>
-          ? stringValue(avatarUrls['thumb'])
-          : '',
+          ? stringValue(
+              avatarUrls['thumb'],
+              fallback: stringValue(json['image_link']),
+            )
+          : stringValue(json['image_link']),
+      preview: previewData is Map<String, dynamic>
+          ? ActivityPostPreview.fromJson(previewData)
+          : null,
       mediaItems: mediaItems is List<dynamic>
           ? mediaItems
-                .whereType<Map<String, dynamic>>()
-                .map(ActivityImageAttachment.fromJson)
-                .toList(growable: false)
+              .whereType<Map<String, dynamic>>()
+              .map(ActivityImageAttachment.fromJson)
+              .toList(growable: false)
           : const <ActivityImageAttachment>[],
       documentItems: documentItems is List<dynamic>
           ? documentItems
-                .whereType<Map<String, dynamic>>()
-                .map(ActivityDocumentAttachment.fromJson)
-                .toList(growable: false)
+              .whereType<Map<String, dynamic>>()
+              .map(ActivityDocumentAttachment.fromJson)
+              .toList(growable: false)
           : const <ActivityDocumentAttachment>[],
     );
   }
@@ -140,5 +174,46 @@ class ActivityFeedItem {
     }
 
     return intValue(json['source_blog']);
+  }
+
+  static String _normalizedActionText(String value) {
+    if (value.isEmpty) {
+      return '';
+    }
+
+    final collapsed = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return collapsed;
+  }
+}
+
+class ActivityPostPreview {
+  const ActivityPostPreview({
+    required this.postId,
+    required this.postType,
+    required this.title,
+    required this.excerpt,
+    required this.imageUrl,
+    required this.link,
+  });
+
+  final int postId;
+  final String postType;
+  final String title;
+  final String excerpt;
+  final String imageUrl;
+  final String link;
+
+  bool get hasContent =>
+      title.isNotEmpty || excerpt.isNotEmpty || imageUrl.isNotEmpty;
+
+  factory ActivityPostPreview.fromJson(Map<String, dynamic> json) {
+    return ActivityPostPreview(
+      postId: intValue(json['post_id']),
+      postType: stringValue(json['post_type']),
+      title: decodedTextValue(json['title']),
+      excerpt: plainTextValue(json['excerpt']),
+      imageUrl: stringValue(json['image_url']),
+      link: stringValue(json['link']),
+    );
   }
 }

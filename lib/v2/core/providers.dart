@@ -3,20 +3,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../app/app_shell_page.dart';
+import '../app/v2_theme.dart';
 import '../features/auth/presentation/auth_controller.dart';
+import '../features/auth/presentation/change_password_page.dart';
+import '../features/auth/presentation/forgot_password_page.dart';
 import '../features/auth/presentation/sign_in_page.dart';
 import '../features/courses/domain/course_detail.dart';
 import '../features/courses/domain/course_summary.dart';
 import '../features/courses/presentation/course_detail_page.dart';
-import '../features/dashboard/domain/activity_feed_item.dart';
 import '../features/dashboard/domain/activity_comment.dart';
+import '../features/dashboard/domain/activity_feed_item.dart';
 import '../features/events/domain/event_detail.dart';
 import '../features/events/domain/event_summary.dart';
 import '../features/events/presentation/event_detail_page.dart';
 import '../features/groups/domain/group_detail.dart';
-import '../features/groups/domain/group_feed_item.dart';
+import '../features/groups/domain/group_discussion.dart';
+import '../features/groups/domain/group_document.dart';
+import '../features/groups/domain/group_member.dart';
+import '../features/groups/domain/group_notification_settings.dart';
 import '../features/groups/domain/group_summary.dart';
+import '../features/groups/domain/group_subgroup.dart';
 import '../features/groups/presentation/group_detail_page.dart';
+import '../features/library/domain/library_post.dart';
+import '../features/library/presentation/library_post_detail_page.dart';
 import 'dependencies.dart';
 
 final coursesProvider = FutureProvider<List<CourseSummary>>((ref) {
@@ -38,12 +47,97 @@ final groupDetailProvider =
 });
 
 final groupFeedProvider =
-    FutureProvider.family<List<GroupFeedItem>, int>((ref, groupId) {
+    FutureProvider.family<List<ActivityFeedItem>, int>((ref, groupId) {
   return ref.watch(groupsRepositoryProvider).fetchGroupFeed(groupId);
+});
+
+final groupDiscussionsProvider =
+    FutureProvider.family<List<GroupDiscussion>, int>((ref, groupId) {
+  return ref.watch(groupsRepositoryProvider).fetchGroupDiscussions(groupId);
+});
+
+final groupDocumentsProvider =
+    FutureProvider.family<List<GroupDocument>, int>((ref, groupId) {
+  return ref.watch(groupsRepositoryProvider).fetchGroupDocuments(groupId);
+});
+
+class GroupDocumentsQuery {
+  const GroupDocumentsQuery({
+    required this.groupId,
+    required this.folderId,
+  });
+
+  final int groupId;
+  final int folderId;
+
+  @override
+  bool operator ==(Object other) {
+    return other is GroupDocumentsQuery &&
+        other.groupId == groupId &&
+        other.folderId == folderId;
+  }
+
+  @override
+  int get hashCode => Object.hash(groupId, folderId);
+}
+
+final groupDocumentFolderProvider =
+    FutureProvider.family<List<GroupDocument>, GroupDocumentsQuery>((
+  ref,
+  query,
+) {
+  return ref.watch(groupsRepositoryProvider).fetchGroupDocuments(
+        query.groupId,
+        folderId: query.folderId,
+      );
+});
+
+final groupSubgroupsProvider =
+    FutureProvider.family<List<GroupSubgroup>, int>((ref, groupId) {
+  return ref.watch(groupsRepositoryProvider).fetchGroupSubgroups(groupId);
+});
+
+final groupNotificationSettingsProvider =
+    FutureProvider.family<GroupNotificationSettings, int>((ref, groupId) {
+  return ref
+      .watch(groupsRepositoryProvider)
+      .fetchGroupNotificationSettings(groupId);
+});
+
+class GroupMembersQuery {
+  const GroupMembersQuery({
+    required this.groupId,
+    this.search = '',
+  });
+
+  final int groupId;
+  final String search;
+
+  @override
+  bool operator ==(Object other) {
+    return other is GroupMembersQuery &&
+        other.groupId == groupId &&
+        other.search == search;
+  }
+
+  @override
+  int get hashCode => Object.hash(groupId, search);
+}
+
+final groupMembersProvider =
+    FutureProvider.family<List<GroupMember>, GroupMembersQuery>((ref, query) {
+  return ref.watch(groupsRepositoryProvider).fetchGroupMembers(
+        query.groupId,
+        search: query.search,
+      );
 });
 
 final previousEventsProvider = FutureProvider<List<EventSummary>>((ref) {
   return ref.watch(eventsRepositoryProvider).fetchPreviousEvents();
+});
+
+final recordedEventsProvider = FutureProvider<List<EventSummary>>((ref) {
+  return ref.watch(eventsRepositoryProvider).fetchRecordedEvents();
 });
 
 final upcomingEventsProvider = FutureProvider<List<EventSummary>>((ref) {
@@ -57,14 +151,59 @@ final eventDetailProvider = FutureProvider.family<EventDetail, int>((
   return ref.watch(eventsRepositoryProvider).fetchEventDetail(eventId);
 });
 
-final dashboardActivityProvider = FutureProvider<List<ActivityFeedItem>>((ref) {
-  return ref.watch(dashboardRepositoryProvider).fetchActivityFeed();
+final libraryPostsProvider = FutureProvider<List<LibraryPostSummary>>((ref) {
+  return ref.watch(libraryRepositoryProvider).fetchPosts();
+});
+
+class LibraryPostsQuery {
+  const LibraryPostsQuery({
+    required this.page,
+    required this.perPage,
+    this.search = '',
+  });
+
+  final int page;
+  final int perPage;
+  final String search;
+
+  @override
+  bool operator ==(Object other) {
+    return other is LibraryPostsQuery &&
+        other.page == page &&
+        other.perPage == perPage &&
+        other.search == search;
+  }
+
+  @override
+  int get hashCode => Object.hash(page, perPage, search);
+}
+
+final libraryPostsPageProvider =
+    FutureProvider.family<List<LibraryPostSummary>, LibraryPostsQuery>((
+  ref,
+  query,
+) {
+  return ref.watch(libraryRepositoryProvider).fetchPosts(
+        search: query.search,
+        page: query.page,
+        perPage: query.perPage,
+      );
+});
+
+final librarySearchPostsProvider =
+    FutureProvider.family<List<LibraryPostSummary>, String>((ref, query) {
+  return ref.watch(libraryRepositoryProvider).fetchPosts(search: query);
+});
+
+final libraryPostDetailProvider =
+    FutureProvider.family<LibraryPostDetail, int>((ref, postId) {
+  return ref.watch(libraryRepositoryProvider).fetchPostDetail(postId);
 });
 
 final activityCommentsProvider =
     FutureProvider.family<List<ActivityComment>, int>((ref, activityId) {
-      return ref.watch(dashboardRepositoryProvider).fetchComments(activityId);
-    });
+  return ref.watch(dashboardRepositoryProvider).fetchComments(activityId);
+});
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authControllerProvider);
@@ -81,13 +220,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SignInPage(),
       ),
       GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: '/change-password',
+        builder: (context, state) => const ChangePasswordPage(),
+      ),
+      GoRoute(
         path: '/app/:tab',
         builder: (context, state) {
           final tab = AppTab.fromSlug(state.pathParameters['tab']);
           return AppShellPage(
             currentTab: tab,
+            groupsInitialTab: state.uri.queryParameters['groupsTab'],
             onTabSelected: (nextTab) =>
                 GoRouter.of(context).go('/app/${nextTab.slug}'),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/app/:tab/post/:id',
+        builder: (context, state) {
+          final postId = int.parse(state.pathParameters['id']!);
+          return LibraryPostDetailPage(
+            tab: AppTab.fromSlug(state.pathParameters['tab']),
+            postId: postId,
           );
         },
       ),
@@ -108,6 +266,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           return GroupDetailPage(
             tab: AppTab.fromSlug(state.pathParameters['tab']),
             groupId: groupId,
+            source: state.uri.queryParameters['source'],
+            parentGroupId: int.tryParse(
+              state.uri.queryParameters['parentId'] ?? '',
+            ),
           );
         },
       ),
@@ -126,13 +288,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       final path = state.matchedLocation;
       final isLoading = authState.isLoading;
       final isAuthenticated = authState.asData?.value != null;
+      final isPublicAuthRoute =
+          path == '/sign-in' || path == '/forgot-password';
 
       if (isLoading) {
         return path == '/loading' ? null : '/loading';
       }
 
       if (!isAuthenticated) {
-        return path == '/sign-in' ? null : '/sign-in';
+        return isPublicAuthRoute ? null : '/sign-in';
       }
 
       if (path == '/sign-in' || path == '/loading') {
@@ -150,7 +314,10 @@ class _LoadingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+      backgroundColor: V2Palette.deepBlue,
+      body: Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      ),
     );
   }
 }

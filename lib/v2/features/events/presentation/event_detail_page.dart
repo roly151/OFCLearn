@@ -135,7 +135,7 @@ class _EventDetailContent extends StatelessWidget {
               ],
               if (event.ervLink.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 18),
-                Text('Registration link',
+                Text('Recording link',
                     style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 6),
                 SelectableText(event.ervLink),
