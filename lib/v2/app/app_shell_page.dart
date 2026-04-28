@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
 import '../features/courses/presentation/courses_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
 import '../features/events/presentation/events_page.dart';
 import '../features/groups/presentation/groups_page.dart';
 import '../features/library/presentation/library_page.dart';
+import '../features/messages/presentation/message_read_state_controller.dart';
 import '../features/profile/presentation/profile_page.dart';
-import '../features/auth/presentation/auth_controller.dart';
-import '../core/dependencies.dart';
+import '../core/providers.dart';
 import '../core/widgets/ambient_scaffold.dart';
+import '../core/widgets/compact_text_scale.dart';
 
 class AppShellPage extends ConsumerWidget {
   const AppShellPage({
@@ -37,9 +38,15 @@ class AppShellPage extends ConsumerWidget {
     final selectedNavigationIndex = _navigationTabs.contains(currentTab)
         ? _navigationTabs.indexOf(currentTab)
         : 0;
-    final session = ref.watch(authControllerProvider).asData?.value;
-    final config = ref.watch(appConfigProvider);
-    final username = session?.user.username.trim() ?? '';
+    final readMarkers = ref.watch(messageReadStateProvider);
+    final unreadMessageCount = ref.watch(messageThreadsProvider).maybeWhen<int>(
+          data: (threads) => threads.fold<int>(
+            0,
+            (total, thread) =>
+                total + visibleUnreadCountForThread(thread, readMarkers),
+          ),
+          orElse: () => 0,
+        );
 
     return AmbientScaffold(
       child: Column(
@@ -59,31 +66,18 @@ class AppShellPage extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 IconButton.filledTonal(
-                  onPressed: username.isEmpty
-                      ? null
-                      : () => _openBuddyBossPage(
-                            context,
-                            config.buddyBossMemberUri(
-                              username: username,
-                              section: 'messages',
-                            ),
-                            failureMessage: 'Unable to open messages.',
-                          ),
-                  icon: const Icon(Icons.mail_outline_rounded),
+                  onPressed: () =>
+                      context.push('/app/${currentTab.slug}/messages'),
+                  icon: _HeaderBadgeIcon(
+                    icon: Icons.mail_outline_rounded,
+                    count: unreadMessageCount,
+                  ),
                   tooltip: 'Messages',
                 ),
                 const SizedBox(width: 8),
                 IconButton.filledTonal(
-                  onPressed: username.isEmpty
-                      ? null
-                      : () => _openBuddyBossPage(
-                            context,
-                            config.buddyBossMemberUri(
-                              username: username,
-                              section: 'notifications',
-                            ),
-                            failureMessage: 'Unable to open notifications.',
-                          ),
+                  onPressed: () =>
+                      context.push('/app/${currentTab.slug}/notifications'),
                   icon: const Icon(Icons.notifications_outlined),
                   tooltip: 'Notifications',
                 ),
@@ -97,34 +91,37 @@ class AppShellPage extends ConsumerWidget {
             ),
           ),
           Expanded(child: _pageFor(currentTab)),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: NavigationBar(
-              selectedIndex: selectedNavigationIndex,
-              onDestinationSelected: (index) =>
-                  onTabSelected(_navigationTabs[index]),
-              destinations: const <NavigationDestination>[
-                NavigationDestination(
-                    icon: Icon(Icons.dashboard_outlined),
-                    selectedIcon: Icon(Icons.dashboard_rounded),
-                    label: 'Dashboard'),
-                NavigationDestination(
-                    icon: Icon(Icons.school_outlined),
-                    selectedIcon: Icon(Icons.school_rounded),
-                    label: 'Courses'),
-                NavigationDestination(
-                    icon: Icon(Icons.library_books_outlined),
-                    selectedIcon: Icon(Icons.library_books_rounded),
-                    label: 'Library'),
-                NavigationDestination(
-                    icon: Icon(Icons.groups_outlined),
-                    selectedIcon: Icon(Icons.groups_rounded),
-                    label: 'Groups'),
-                NavigationDestination(
-                    icon: Icon(Icons.event_outlined),
-                    selectedIcon: Icon(Icons.event_rounded),
-                    label: 'Events'),
-              ],
+          CompactTextScale(
+            maxScaleFactor: 1,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: NavigationBar(
+                selectedIndex: selectedNavigationIndex,
+                onDestinationSelected: (index) =>
+                    onTabSelected(_navigationTabs[index]),
+                destinations: const <NavigationDestination>[
+                  NavigationDestination(
+                      icon: Icon(Icons.dashboard_outlined),
+                      selectedIcon: Icon(Icons.dashboard_rounded),
+                      label: 'Dashboard'),
+                  NavigationDestination(
+                      icon: Icon(Icons.school_outlined),
+                      selectedIcon: Icon(Icons.school_rounded),
+                      label: 'Courses'),
+                  NavigationDestination(
+                      icon: Icon(Icons.library_books_outlined),
+                      selectedIcon: Icon(Icons.library_books_rounded),
+                      label: 'Library'),
+                  NavigationDestination(
+                      icon: Icon(Icons.groups_outlined),
+                      selectedIcon: Icon(Icons.groups_rounded),
+                      label: 'Groups'),
+                  NavigationDestination(
+                      icon: Icon(Icons.event_outlined),
+                      selectedIcon: Icon(Icons.event_rounded),
+                      label: 'Events'),
+                ],
+              ),
             ),
           ),
         ],
@@ -147,6 +144,29 @@ class AppShellPage extends ConsumerWidget {
       case AppTab.profile:
         return const ProfilePage();
     }
+  }
+}
+
+class _HeaderBadgeIcon extends StatelessWidget {
+  const _HeaderBadgeIcon({
+    required this.icon,
+    required this.count,
+  });
+
+  final IconData icon;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    if (count <= 0) {
+      return Icon(icon);
+    }
+
+    return Badge.count(
+      count: count > 99 ? 99 : count,
+      isLabelVisible: true,
+      child: Icon(icon),
+    );
   }
 }
 
@@ -185,18 +205,5 @@ enum AppTab {
       (tab) => tab.slug == slug,
       orElse: () => AppTab.dashboard,
     );
-  }
-}
-
-Future<void> _openBuddyBossPage(
-  BuildContext context,
-  Uri uri, {
-  required String failureMessage,
-}) async {
-  final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!opened && context.mounted) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(failureMessage)));
   }
 }

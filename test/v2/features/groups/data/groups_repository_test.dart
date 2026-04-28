@@ -81,6 +81,98 @@ void main() {
     expect(discussions.single.title, 'Welcome discussion');
     expect(discussions.single.replyCount, 3);
   });
+
+  test('fetchGroupDiscussion reads topic detail and replies', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(server.close);
+
+    unawaited(
+      server.forEach((request) {
+        expect(request.uri.path, '/groups/7/discussions/49297');
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode(<String, Object?>{
+            'id': 49297,
+            'group_id': 7,
+            'forum_id': 49296,
+            'author_name': 'Sean Douglas',
+            'author_avatar_url': '',
+            'title': 'Welcome discussion',
+            'content': '<p>Welcome to the group.</p>',
+            'primary_link': 'https://example.test/groups/topic/1/',
+            'date_recorded': '2026-04-23',
+            'reply_count': 1,
+            'replies': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 49310,
+                'author_name': 'Coach Example',
+                'author_avatar_url': '',
+                'content': '<p>Thanks Sean.</p>',
+                'primary_link': 'https://example.test/groups/topic/1/#post-49310',
+                'date_recorded': '2026-04-24',
+              },
+            ],
+          }),
+        );
+        unawaited(request.response.close());
+      }),
+    );
+
+    final repository = GroupsRepository(
+      ApiClient(
+        baseUrl: 'http://${server.address.host}:${server.port}',
+        tokenStorage: _NoopTokenStorage(),
+      ),
+      wpJsonBaseUrl: 'http://${server.address.host}:${server.port}',
+    );
+
+    final discussion = await repository.fetchGroupDiscussion(
+      groupId: 7,
+      discussionId: 49297,
+    );
+
+    expect(discussion.title, 'Welcome discussion');
+    expect(discussion.contentHtml, '<p>Welcome to the group.</p>');
+    expect(discussion.replies.single.authorName, 'Coach Example');
+  });
+
+  test('createGroupDiscussionReply posts a topic reply', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(server.close);
+
+    unawaited(
+      server.forEach((request) async {
+        expect(request.method, 'POST');
+        expect(request.uri.path, '/groups/7/discussions/49297');
+        final body = await utf8.decoder.bind(request).join();
+        expect(jsonDecode(body), <String, Object?>{'message': 'Thanks Sean.'});
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode(<String, Object?>{
+            'id': 49311,
+            'message': 'Reply posted successfully.',
+          }),
+        );
+        unawaited(request.response.close());
+      }),
+    );
+
+    final repository = GroupsRepository(
+      ApiClient(
+        baseUrl: 'http://${server.address.host}:${server.port}',
+        tokenStorage: _NoopTokenStorage(),
+      ),
+      wpJsonBaseUrl: 'http://${server.address.host}:${server.port}',
+    );
+
+    final result = await repository.createGroupDiscussionReply(
+      groupId: 7,
+      discussionId: 49297,
+      message: 'Thanks Sean.',
+    );
+
+    expect(result.message, 'Reply posted successfully.');
+  });
 }
 
 Map<String, Object?> _activityJson({

@@ -49,6 +49,31 @@ class GroupsRepository {
         .toList(growable: false);
   }
 
+  Future<GroupDiscussionDetail> fetchGroupDiscussion({
+    required int groupId,
+    required int discussionId,
+  }) async {
+    final response = await _apiClient.getMap(
+      '/groups/$groupId/discussions/$discussionId',
+    );
+    return GroupDiscussionDetail.fromJson(response);
+  }
+
+  Future<ActionResult> createGroupDiscussionReply({
+    required int groupId,
+    required int discussionId,
+    required String message,
+  }) async {
+    final response = await _apiClient.postMap(
+      '/groups/$groupId/discussions/$discussionId',
+      data: <String, dynamic>{'message': message},
+    );
+    return ActionResult.fromJson(
+      response,
+      fallbackMessage: 'Reply posted successfully.',
+    );
+  }
+
   Future<ActionResult> createGroupPost({
     required int groupId,
     required String content,

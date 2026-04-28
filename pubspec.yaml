@@ -68,6 +68,9 @@ dependencies:
     internet_file: ^1.2.0
     pdfx: ^2.9.2
     url_launcher: ^6.3.2
+    firebase_messaging: ^16.2.0
+    flutter_local_notifications: ^21.0.0
+    app_badge_plus: ^1.2.9
     # flutter_webview_plugin: ^0.4.0
 
 dev_dependencies:

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/app_shell_page.dart';
 import '../../../app/v2_theme.dart';
@@ -11,15 +10,19 @@ import '../../../core/network/json_helpers.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/ambient_scaffold.dart';
 import '../../../core/widgets/async_state_view.dart';
+import '../../../core/widgets/compact_text_scale.dart';
 import '../../../core/widgets/page_header.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../dashboard/domain/activity_feed_item.dart';
 import '../../dashboard/presentation/activity_feed_widgets.dart';
+import '../../dashboard/presentation/activity_html_content.dart';
+import '../../dashboard/presentation/activity_interaction_widgets.dart';
 import '../domain/group_detail.dart';
 import '../domain/group_discussion.dart';
 import '../domain/group_notification_settings.dart';
 import '../domain/group_subgroup.dart';
 import 'group_documents_tab.dart';
+import 'group_discussion_reply_controller.dart';
 import 'group_join_controller.dart';
 import 'group_notifications_controller.dart';
 import 'group_post_controller.dart';
@@ -181,39 +184,41 @@ class _GroupDetailTabs extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: V2Palette.cardBorder),
               ),
-              child: TabBar(
-                dividerColor: Colors.transparent,
-                indicatorSize: TabBarIndicatorSize.tab,
-                indicator: BoxDecoration(
-                  color: V2Palette.primaryBlue,
-                  borderRadius: BorderRadius.circular(14),
+              child: CompactTextScale(
+                child: TabBar(
+                  dividerColor: Colors.transparent,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicator: BoxDecoration(
+                    color: V2Palette.primaryBlue,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  indicatorPadding: const EdgeInsets.all(6),
+                  labelPadding: EdgeInsets.zero,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: V2Palette.ink,
+                  tabs: const <Widget>[
+                    _DetailTabLabel(
+                      icon: Icons.dynamic_feed_outlined,
+                      label: 'Feed',
+                    ),
+                    _DetailTabLabel(
+                      icon: Icons.forum_outlined,
+                      label: 'Discuss',
+                    ),
+                    _DetailTabLabel(
+                      icon: Icons.folder_copy_outlined,
+                      label: 'Docs',
+                    ),
+                    _DetailTabLabel(
+                      icon: Icons.groups_2_outlined,
+                      label: 'Groups',
+                    ),
+                    _DetailTabLabel(
+                      icon: Icons.notifications_outlined,
+                      label: 'Alerts',
+                    ),
+                  ],
                 ),
-                indicatorPadding: const EdgeInsets.all(6),
-                labelPadding: EdgeInsets.zero,
-                labelColor: Colors.white,
-                unselectedLabelColor: V2Palette.ink,
-                tabs: const <Widget>[
-                  _DetailTabLabel(
-                    icon: Icons.dynamic_feed_outlined,
-                    label: 'Feed',
-                  ),
-                  _DetailTabLabel(
-                    icon: Icons.forum_outlined,
-                    label: 'Discuss',
-                  ),
-                  _DetailTabLabel(
-                    icon: Icons.folder_copy_outlined,
-                    label: 'Docs',
-                  ),
-                  _DetailTabLabel(
-                    icon: Icons.groups_2_outlined,
-                    label: 'Groups',
-                  ),
-                  _DetailTabLabel(
-                    icon: Icons.notifications_outlined,
-                    label: 'Alerts',
-                  ),
-                ],
               ),
             ),
           ),
@@ -226,7 +231,7 @@ class _GroupDetailTabs extends ConsumerWidget {
                   parentTab: tab.slug,
                   postController: postController,
                 ),
-                _GroupDiscussionsTab(groupId: groupId),
+                _GroupDiscussionsTab(groupId: groupId, tab: tab),
                 GroupDocumentsTab(groupId: groupId),
                 _GroupSubgroupsTab(
                   parentTab: tab,
@@ -511,9 +516,13 @@ class _GroupFeedTab extends ConsumerWidget {
 }
 
 class _GroupDiscussionsTab extends ConsumerWidget {
-  const _GroupDiscussionsTab({required this.groupId});
+  const _GroupDiscussionsTab({
+    required this.groupId,
+    required this.tab,
+  });
 
   final int groupId;
+  final AppTab tab;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -543,7 +552,11 @@ class _GroupDiscussionsTab extends ConsumerWidget {
                     .map(
                       (item) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: _DiscussionTile(item: item),
+                        child: _DiscussionTile(
+                          tab: tab,
+                          groupId: groupId,
+                          item: item,
+                        ),
                       ),
                     )
                     .toList(growable: false),
@@ -565,8 +578,14 @@ class _GroupDiscussionsTab extends ConsumerWidget {
 }
 
 class _DiscussionTile extends StatelessWidget {
-  const _DiscussionTile({required this.item});
+  const _DiscussionTile({
+    required this.tab,
+    required this.groupId,
+    required this.item,
+  });
 
+  final AppTab tab;
+  final int groupId;
   final GroupDiscussion item;
 
   @override
@@ -581,24 +600,9 @@ class _DiscussionTile extends StatelessWidget {
 
     return InkWell(
       borderRadius: BorderRadius.circular(28),
-      onTap: item.primaryLink.isEmpty
-          ? null
-          : () async {
-              final uri = Uri.tryParse(item.primaryLink);
-              if (uri == null) {
-                return;
-              }
-
-              final opened = await launchUrl(
-                uri,
-                mode: LaunchMode.externalApplication,
-              );
-              if (!opened && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Unable to open discussion.')),
-                );
-              }
-            },
+      onTap: () => context.push(
+        '/app/${tab.slug}/group/$groupId/discussion/${item.id}',
+      ),
       child: SectionCard(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -618,10 +622,8 @@ class _DiscussionTile extends StatelessWidget {
                 ],
               ),
             ),
-            if (item.primaryLink.isNotEmpty) ...<Widget>[
-              const SizedBox(width: 10),
-              const Icon(Icons.open_in_new_rounded, size: 18),
-            ],
+            const SizedBox(width: 10),
+            const Icon(Icons.chevron_right_rounded, size: 22),
           ],
         ),
       ),
@@ -650,6 +652,308 @@ class _DiscussionAvatar extends StatelessWidget {
       onBackgroundImageError: (_, __) {},
     );
   }
+}
+
+class GroupDiscussionPage extends ConsumerStatefulWidget {
+  const GroupDiscussionPage({
+    required this.tab,
+    required this.groupId,
+    required this.discussionId,
+    super.key,
+  });
+
+  final AppTab tab;
+  final int groupId;
+  final int discussionId;
+
+  @override
+  ConsumerState<GroupDiscussionPage> createState() =>
+      _GroupDiscussionPageState();
+}
+
+class _GroupDiscussionPageState extends ConsumerState<GroupDiscussionPage> {
+  late final TextEditingController _replyController;
+
+  @override
+  void initState() {
+    super.initState();
+    _replyController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _replyController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitReply() async {
+    final message = _replyController.text.trim();
+    if (message.isEmpty) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+
+    try {
+      final result = await ref
+          .read(groupDiscussionReplyControllerProvider.notifier)
+          .createReply(
+            groupId: widget.groupId,
+            discussionId: widget.discussionId,
+            message: message,
+          );
+      _replyController.clear();
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.message)));
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = GroupDiscussionQuery(
+      groupId: widget.groupId,
+      discussionId: widget.discussionId,
+    );
+    final detail = ref.watch(groupDiscussionProvider(query));
+    final replyState = ref.watch(groupDiscussionReplyControllerProvider);
+    final config = ref.watch(appConfigProvider);
+
+    return AmbientScaffold(
+      child: Column(
+        children: <Widget>[
+          _TopBar(
+            onBack: () {
+              if (context.canPop()) {
+                context.pop();
+                return;
+              }
+              context.go('/app/${widget.tab.slug}/group/${widget.groupId}');
+            },
+          ),
+          PageHeader(
+            title: detail.when(
+              data: (topic) => topic.title.trim().isEmpty
+                  ? 'Discussion'
+                  : topic.title.trim(),
+              error: (_, __) => 'Discussion',
+              loading: () => 'Discussion',
+            ),
+            subtitle: detail.when(
+              data: (topic) =>
+                  '${topic.replyCount} ${topic.replyCount == 1 ? 'reply' : 'replies'}',
+              error: (_, __) => '',
+              loading: () => '',
+            ),
+          ),
+          Expanded(
+            child: detail.when(
+              data: (topic) => _DiscussionDetailBody(
+                topic: topic,
+                config: config,
+                replyController: _replyController,
+                isSending: replyState.isLoading,
+                onSubmitReply: _submitReply,
+              ),
+              error: (error, _) => AsyncStateView(
+                message: error.toString(),
+                onRetry: () => ref.invalidate(groupDiscussionProvider(query)),
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DiscussionDetailBody extends StatelessWidget {
+  const _DiscussionDetailBody({
+    required this.topic,
+    required this.config,
+    required this.replyController,
+    required this.isSending,
+    required this.onSubmitReply,
+  });
+
+  final GroupDiscussionDetail topic;
+  final AppConfig config;
+  final TextEditingController replyController;
+  final bool isSending;
+  final VoidCallback onSubmitReply;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Column(
+      children: <Widget>[
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            children: <Widget>[
+              _DiscussionContentCard(
+                authorName: topic.authorName,
+                authorAvatarUrl: topic.authorAvatarUrl,
+                dateRecorded: topic.dateRecorded,
+                contentHtml: topic.contentHtml,
+                content: topic.content,
+                config: config,
+              ),
+              const SizedBox(height: 18),
+              Text('Replies', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 10),
+              if (topic.replies.isEmpty)
+                const AsyncStateView(
+                  icon: Icons.forum_outlined,
+                  message: 'No replies yet. Start the conversation.',
+                )
+              else
+                ...topic.replies.map(
+                  (reply) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _DiscussionReplyCard(
+                      reply: reply,
+                      config: config,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 20 + bottomInset),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: replyController,
+                  minLines: 1,
+                  maxLines: 4,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => onSubmitReply(),
+                  decoration: const InputDecoration(
+                    hintText: 'Write a reply...',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              FilledButton(
+                onPressed: isSending ? null : onSubmitReply,
+                child: const Text('Reply'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DiscussionContentCard extends StatelessWidget {
+  const _DiscussionContentCard({
+    required this.authorName,
+    required this.authorAvatarUrl,
+    required this.dateRecorded,
+    required this.contentHtml,
+    required this.content,
+    required this.config,
+  });
+
+  final String authorName;
+  final String authorAvatarUrl;
+  final String dateRecorded;
+  final String contentHtml;
+  final String content;
+  final AppConfig config;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          ActivityAvatarBadge(
+            imageUrl: config.resolveMediaUrl(authorAvatarUrl),
+            fallbackLabel: _initials(authorName),
+            radius: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(authorName, style: Theme.of(context).textTheme.titleSmall),
+                if (dateRecorded.trim().isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 2),
+                  Text(
+                    dateRecorded,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+                const SizedBox(height: 10),
+                ActivityHtmlContent(
+                  html: activityContentHtml(
+                    rendered: contentHtml,
+                    plainText: content,
+                  ),
+                  fontSize: 15,
+                  lineHeight: 1.45,
+                  paragraphBottomMargin: 10,
+                  onOpenLink: (_) async {},
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DiscussionReplyCard extends StatelessWidget {
+  const _DiscussionReplyCard({
+    required this.reply,
+    required this.config,
+  });
+
+  final GroupDiscussionReply reply;
+  final AppConfig config;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DiscussionContentCard(
+      authorName: reply.authorName,
+      authorAvatarUrl: reply.authorAvatarUrl,
+      dateRecorded: reply.dateRecorded,
+      contentHtml: reply.contentHtml,
+      content: reply.content,
+      config: config,
+    );
+  }
+}
+
+String _initials(String value) {
+  final parts = value
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList(growable: false);
+  if (parts.isEmpty) {
+    return '?';
+  }
+  return parts.take(2).map((part) => part[0].toUpperCase()).join();
 }
 
 class _GroupSubgroupsTab extends ConsumerWidget {

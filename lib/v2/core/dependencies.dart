@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/config/app_config.dart';
 import '../core/network/api_client.dart';
+import '../core/push/push_notification_service.dart';
+import '../core/push/push_repository.dart';
 import '../core/storage/token_storage.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/courses/data/courses_repository.dart';
@@ -10,6 +12,9 @@ import '../features/dashboard/data/dashboard_repository.dart';
 import '../features/events/data/events_repository.dart';
 import '../features/groups/data/groups_repository.dart';
 import '../features/library/data/library_repository.dart';
+import '../features/messages/data/messages_repository.dart';
+import '../features/notifications/data/notifications_repository.dart';
+import '../features/profile/data/profile_repository.dart';
 
 final appConfigProvider = Provider<AppConfig>((ref) {
   return AppConfig.fromEnvironment();
@@ -31,6 +36,17 @@ final apiClientProvider = Provider<ApiClient>((ref) {
     tokenStorage: storage,
     defaultHeaders: config.defaultHeaders,
   );
+});
+
+final pushRepositoryProvider = Provider<PushRepository>((ref) {
+  return PushRepository(ref.watch(apiClientProvider));
+});
+
+final pushNotificationServiceProvider =
+    Provider<PushNotificationService>((ref) {
+  final service = PushNotificationService(ref.watch(pushRepositoryProvider));
+  ref.onDispose(service.dispose);
+  return service;
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -61,4 +77,17 @@ final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
 
 final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
   return LibraryRepository(ref.watch(apiClientProvider));
+});
+
+final messagesRepositoryProvider = Provider<MessagesRepository>((ref) {
+  return MessagesRepository(ref.watch(apiClientProvider));
+});
+
+final notificationsRepositoryProvider =
+    Provider<NotificationsRepository>((ref) {
+  return NotificationsRepository(ref.watch(apiClientProvider));
+});
+
+final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
+  return ProfileRepository(ref.watch(apiClientProvider));
 });

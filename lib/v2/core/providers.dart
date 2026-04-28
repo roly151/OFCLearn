@@ -26,6 +26,13 @@ import '../features/groups/domain/group_subgroup.dart';
 import '../features/groups/presentation/group_detail_page.dart';
 import '../features/library/domain/library_post.dart';
 import '../features/library/presentation/library_post_detail_page.dart';
+import '../features/messages/domain/message_thread.dart';
+import '../features/messages/presentation/direct_message_page.dart';
+import '../features/messages/presentation/message_thread_page.dart';
+import '../features/messages/presentation/messages_inbox_page.dart';
+import '../features/notifications/domain/user_notification_item.dart';
+import '../features/notifications/presentation/notifications_page.dart';
+import '../features/profile/domain/profile_models.dart';
 import 'dependencies.dart';
 
 final coursesProvider = FutureProvider<List<CourseSummary>>((ref) {
@@ -54,6 +61,37 @@ final groupFeedProvider =
 final groupDiscussionsProvider =
     FutureProvider.family<List<GroupDiscussion>, int>((ref, groupId) {
   return ref.watch(groupsRepositoryProvider).fetchGroupDiscussions(groupId);
+});
+
+class GroupDiscussionQuery {
+  const GroupDiscussionQuery({
+    required this.groupId,
+    required this.discussionId,
+  });
+
+  final int groupId;
+  final int discussionId;
+
+  @override
+  bool operator ==(Object other) {
+    return other is GroupDiscussionQuery &&
+        other.groupId == groupId &&
+        other.discussionId == discussionId;
+  }
+
+  @override
+  int get hashCode => Object.hash(groupId, discussionId);
+}
+
+final groupDiscussionProvider =
+    FutureProvider.family<GroupDiscussionDetail, GroupDiscussionQuery>((
+  ref,
+  query,
+) {
+  return ref.watch(groupsRepositoryProvider).fetchGroupDiscussion(
+        groupId: query.groupId,
+        discussionId: query.discussionId,
+      );
 });
 
 final groupDocumentsProvider =
@@ -205,6 +243,41 @@ final activityCommentsProvider =
   return ref.watch(dashboardRepositoryProvider).fetchComments(activityId);
 });
 
+final messageThreadsProvider =
+    FutureProvider<List<MessageThreadSummary>>((ref) {
+  return ref.watch(messagesRepositoryProvider).fetchThreads();
+});
+
+final messageThreadProvider = FutureProvider.autoDispose
+    .family<MessageThreadDetail, int>((ref, threadId) {
+  return ref.watch(messagesRepositoryProvider).fetchThread(threadId);
+});
+
+final directMessageThreadProvider =
+    FutureProvider.autoDispose.family<MessageThreadDetail, int>((ref, userId) {
+  return ref.watch(messagesRepositoryProvider).fetchDirectThread(userId);
+});
+
+final notificationsProvider =
+    FutureProvider.family<List<UserNotificationItem>, String>((ref, status) {
+  return ref.watch(notificationsRepositoryProvider).fetchNotifications(
+        status: status,
+      );
+});
+
+final profileOverviewProvider = FutureProvider<ProfileOverview>((ref) {
+  return ref.watch(profileRepositoryProvider).fetchProfile();
+});
+
+final profileConnectionsProvider = FutureProvider<List<UserConnection>>((ref) {
+  return ref.watch(profileRepositoryProvider).fetchConnections();
+});
+
+final profileQualificationsProvider =
+    FutureProvider<QualificationsOverview>((ref) {
+  return ref.watch(profileRepositoryProvider).fetchQualifications();
+});
+
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authControllerProvider);
 
@@ -226,6 +299,32 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/change-password',
         builder: (context, state) => const ChangePasswordPage(),
+      ),
+      GoRoute(
+        path: '/app/:tab/messages',
+        builder: (context, state) => MessagesInboxPage(
+          tab: AppTab.fromSlug(state.pathParameters['tab']),
+        ),
+      ),
+      GoRoute(
+        path: '/app/:tab/messages/direct/:userId',
+        builder: (context, state) => DirectMessagePage(
+          tab: AppTab.fromSlug(state.pathParameters['tab']),
+          userId: int.parse(state.pathParameters['userId']!),
+        ),
+      ),
+      GoRoute(
+        path: '/app/:tab/messages/:id',
+        builder: (context, state) => MessageThreadPage(
+          tab: AppTab.fromSlug(state.pathParameters['tab']),
+          threadId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: '/app/:tab/notifications',
+        builder: (context, state) => NotificationsPage(
+          tab: AppTab.fromSlug(state.pathParameters['tab']),
+        ),
       ),
       GoRoute(
         path: '/app/:tab',
@@ -270,6 +369,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             parentGroupId: int.tryParse(
               state.uri.queryParameters['parentId'] ?? '',
             ),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/app/:tab/group/:groupId/discussion/:discussionId',
+        builder: (context, state) {
+          return GroupDiscussionPage(
+            tab: AppTab.fromSlug(state.pathParameters['tab']),
+            groupId: int.parse(state.pathParameters['groupId']!),
+            discussionId: int.parse(state.pathParameters['discussionId']!),
           );
         },
       ),

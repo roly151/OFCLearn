@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1015604941251",
+    "project_id": "ofclearn-app",
+    "storage_bucket": "ofclearn-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1015604941251:android:90d66c5d5874e57323ed76",
+        "android_client_info": {
+          "package_name": "com.ofclearn.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbujlaG09fs5dF9HVikGgWrQU-ZpatUAY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

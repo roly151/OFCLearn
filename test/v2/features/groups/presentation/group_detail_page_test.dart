@@ -13,6 +13,7 @@ import 'package:ofc_learn_v2/v2/features/groups/domain/group_discussion.dart';
 import 'package:ofc_learn_v2/v2/features/groups/domain/group_document.dart';
 import 'package:ofc_learn_v2/v2/features/groups/domain/group_notification_settings.dart';
 import 'package:ofc_learn_v2/v2/features/groups/domain/group_subgroup.dart';
+import 'package:ofc_learn_v2/v2/features/groups/presentation/group_discussion_reply_controller.dart';
 import 'package:ofc_learn_v2/v2/features/groups/presentation/group_detail_page.dart';
 import 'package:ofc_learn_v2/v2/features/groups/presentation/group_join_controller.dart';
 import 'package:ofc_learn_v2/v2/features/groups/presentation/group_notifications_controller.dart';
@@ -234,6 +235,17 @@ void main() {
                   label: 'Daily Digest',
                   description: "Get the day's activity bundled into one email",
                 ),
+                GroupNotificationOption(
+                  value: 'sub',
+                  label: 'New Topics',
+                  description:
+                      'Send new topics as they arrive (but no replies)',
+                ),
+                GroupNotificationOption(
+                  value: 'supersub',
+                  label: 'All Email',
+                  description: 'Send all group activity as it arrives',
+                ),
               ],
             ),
           ),
@@ -297,6 +309,17 @@ void main() {
 
     expect(find.text('Email Subscription Options'), findsOneWidget);
     expect(find.text('Daily Digest'), findsOneWidget);
+    expect(find.text('I will read this group on the web'), findsOneWidget);
+    expect(find.text('Get a summary of topics each week'), findsOneWidget);
+    expect(
+      find.text("Get the day's activity bundled into one email"),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Send new topics as they arrive (but no replies)'),
+      findsOneWidget,
+    );
+    expect(find.text('Send all group activity as it arrives'), findsOneWidget);
     expect(find.text('Save Settings'), findsOneWidget);
   });
 
@@ -474,6 +497,75 @@ void main() {
     expect(find.text('Parent Coaches'), findsOneWidget);
     expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
   });
+
+  testWidgets('group discussion page reads and replies in app', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appConfigProvider.overrideWith(
+            (ref) => const AppConfig(
+              baseUrl: 'https://example.test/wp-json/ofc-mobile/v1',
+              appName: 'OFC Learn v2',
+              publicBaseUrl: 'https://example.test',
+            ),
+          ),
+          groupDiscussionProvider.overrideWith(
+            (ref, query) async => const GroupDiscussionDetail(
+              id: 49297,
+              groupId: 4,
+              forumId: 49296,
+              authorName: 'Sean Douglas',
+              authorAvatarUrl: '',
+              title: 'Welcome discussion',
+              content: 'Welcome to the group.',
+              contentHtml: '<p>Welcome to the group.</p>',
+              primaryLink: 'https://example.test/groups/topic/1/',
+              dateRecorded: '2026-04-23',
+              replyCount: 1,
+              replies: <GroupDiscussionReply>[
+                GroupDiscussionReply(
+                  id: 49310,
+                  authorName: 'Coach Example',
+                  authorAvatarUrl: '',
+                  content: 'Thanks Sean.',
+                  contentHtml: '<p>Thanks Sean.</p>',
+                  primaryLink:
+                      'https://example.test/groups/topic/1/#post-49310',
+                  dateRecorded: '2026-04-24',
+                ),
+              ],
+            ),
+          ),
+          groupDiscussionReplyControllerProvider
+              .overrideWith(() => _TestGroupDiscussionReplyController()),
+        ],
+        child: const MaterialApp(
+          home: GroupDiscussionPage(
+            tab: AppTab.groups,
+            groupId: 4,
+            discussionId: 49297,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome discussion'), findsOneWidget);
+    expect(find.text('Replies'), findsOneWidget);
+    expect(find.text('Coach Example'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'I agree.');
+    await tester.tap(find.text('Reply'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reply saved'), findsOneWidget);
+  });
 }
 
 class _TestGroupJoinController extends GroupJoinController {
@@ -509,5 +601,20 @@ class _TestGroupNotificationsController extends GroupNotificationsController {
     required String subscription,
   }) async {
     return const ActionResult(message: 'Saved');
+  }
+}
+
+class _TestGroupDiscussionReplyController
+    extends GroupDiscussionReplyController {
+  @override
+  Future<void> build() async {}
+
+  @override
+  Future<ActionResult> createReply({
+    required int groupId,
+    required int discussionId,
+    required String message,
+  }) async {
+    return const ActionResult(message: 'Reply saved');
   }
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/v2_theme.dart';
 import '../../../core/providers.dart';
+import '../../../core/widgets/compact_text_scale.dart';
 import '../../../core/widgets/async_state_view.dart';
 import '../../../core/widgets/page_header.dart';
 import '../../../core/widgets/section_card.dart';
@@ -74,20 +75,22 @@ class _GroupsTabs extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: V2Palette.cardBorder),
               ),
-              child: TabBar(
-                dividerColor: Colors.transparent,
-                indicatorSize: TabBarIndicatorSize.tab,
-                indicator: BoxDecoration(
-                  color: V2Palette.primaryBlue,
-                  borderRadius: BorderRadius.circular(14),
+              child: CompactTextScale(
+                child: TabBar(
+                  dividerColor: Colors.transparent,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicator: BoxDecoration(
+                    color: V2Palette.primaryBlue,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  indicatorPadding: const EdgeInsets.all(6),
+                  labelColor: Colors.white,
+                  unselectedLabelColor: V2Palette.ink,
+                  tabs: const <Widget>[
+                    Tab(text: 'All Groups'),
+                    Tab(text: 'My Groups'),
+                  ],
                 ),
-                indicatorPadding: const EdgeInsets.all(6),
-                labelColor: Colors.white,
-                unselectedLabelColor: V2Palette.ink,
-                tabs: const <Widget>[
-                  Tab(text: 'All Groups'),
-                  Tab(text: 'My Groups'),
-                ],
               ),
             ),
           ),
