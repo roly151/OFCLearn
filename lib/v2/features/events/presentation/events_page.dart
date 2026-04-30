@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../app/app_shell_page.dart';
+import '../../../core/device_orientation_policy.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_state_view.dart';
 import '../../../core/widgets/page_header.dart';
@@ -326,6 +327,7 @@ class _RecordingPlayerPageState extends State<_RecordingPlayerPage> {
   @override
   void initState() {
     super.initState();
+    allowVideoPlayerOrientations();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.black)
@@ -343,6 +345,12 @@ class _RecordingPlayerPageState extends State<_RecordingPlayerPage> {
         ),
       )
       ..loadRequest(Uri.parse(widget.url));
+  }
+
+  @override
+  void dispose() {
+    lockToAppPortraitOrientations();
+    super.dispose();
   }
 
   @override

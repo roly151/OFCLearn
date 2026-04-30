@@ -8,6 +8,7 @@ import 'package:video_player/video_player.dart';
 import '../../../app/v2_theme.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/dependencies.dart';
+import '../../../core/device_orientation_policy.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_state_view.dart';
 import '../../../core/widgets/section_card.dart';
@@ -559,6 +560,7 @@ class _GroupDocumentVideoPlayerPageState
   @override
   void initState() {
     super.initState();
+    allowVideoPlayerOrientations();
     _controller = VideoPlayerController.networkUrl(
       Uri.parse(widget.url),
       httpHeaders: widget.headers,
@@ -568,6 +570,7 @@ class _GroupDocumentVideoPlayerPageState
 
   @override
   void dispose() {
+    lockToAppPortraitOrientations();
     _controller.dispose();
     super.dispose();
   }

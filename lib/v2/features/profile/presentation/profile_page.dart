@@ -11,11 +11,46 @@ import '../../../core/widgets/section_card.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../domain/profile_models.dart';
 
-class ProfilePage extends ConsumerWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+  static const double _headerCollapseDistance = 180;
+
+  double _headerReveal = 1;
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+
+    if (notification.metrics.pixels <= 0 && _headerReveal != 1) {
+      setState(() => _headerReveal = 1);
+      return false;
+    }
+
+    if (notification is ScrollUpdateNotification) {
+      final delta = notification.scrollDelta;
+      if (delta == null || delta == 0) {
+        return false;
+      }
+
+      final nextReveal =
+          (_headerReveal - (delta / _headerCollapseDistance)).clamp(0.0, 1.0);
+      if (nextReveal != _headerReveal) {
+        setState(() => _headerReveal = nextReveal);
+      }
+    }
+
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final profileAsync = ref.watch(profileOverviewProvider);
 
     return DefaultTabController(
@@ -23,7 +58,16 @@ class ProfilePage extends ConsumerWidget {
       child: profileAsync.when(
         data: (profile) => Column(
           children: <Widget>[
-            _ProfileHeader(profile: profile),
+            ClipRect(
+              child: Align(
+                heightFactor: _headerReveal,
+                alignment: Alignment.topCenter,
+                child: Opacity(
+                  opacity: _headerReveal,
+                  child: _ProfileHeader(profile: profile),
+                ),
+              ),
+            ),
             const CompactTextScale(
               child: TabBar(
                 isScrollable: true,
@@ -36,12 +80,15 @@ class ProfilePage extends ConsumerWidget {
               ),
             ),
             Expanded(
-              child: TabBarView(
-                children: <Widget>[
-                  _ProfileDetailsTab(profile: profile),
-                  const _ConnectionsTab(),
-                  const _QualificationsTab(),
-                ],
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _handleScrollNotification,
+                child: TabBarView(
+                  children: <Widget>[
+                    _ProfileDetailsTab(profile: profile),
+                    const _ConnectionsTab(),
+                    const _QualificationsTab(),
+                  ],
+                ),
               ),
             ),
           ],

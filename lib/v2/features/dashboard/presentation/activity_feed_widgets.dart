@@ -8,6 +8,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../app/v2_theme.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/device_orientation_policy.dart';
 import '../../../core/widgets/section_card.dart';
 import '../domain/activity_attachment.dart';
 import '../domain/activity_feed_item.dart';
@@ -1363,6 +1364,7 @@ class _EmbeddedVideoPageState extends State<_EmbeddedVideoPage> {
   @override
   void initState() {
     super.initState();
+    allowVideoPlayerOrientations();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.black)
@@ -1382,6 +1384,12 @@ class _EmbeddedVideoPageState extends State<_EmbeddedVideoPage> {
         Uri.parse(widget.video.embedUrl),
         headers: widget.video.requestHeaders,
       );
+  }
+
+  @override
+  void dispose() {
+    lockToAppPortraitOrientations();
+    super.dispose();
   }
 
   @override

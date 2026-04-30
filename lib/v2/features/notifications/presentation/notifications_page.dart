@@ -28,7 +28,7 @@ class NotificationsPage extends ConsumerStatefulWidget {
 }
 
 class _NotificationsPageState extends ConsumerState<NotificationsPage> {
-  String _status = 'all';
+  String _status = 'unread';
 
   Future<void> _markAllRead() async {
     final messenger = ScaffoldMessenger.of(context);
@@ -67,11 +67,6 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                     spacing: 10,
                     runSpacing: 10,
                     children: <Widget>[
-                      _FilterChip(
-                        label: 'All',
-                        selected: _status == 'all',
-                        onSelected: () => setState(() => _status = 'all'),
-                      ),
                       _FilterChip(
                         label: 'Unread',
                         selected: _status == 'unread',
@@ -134,14 +129,25 @@ class _NotificationsTopBar extends StatelessWidget {
             icon: const Icon(Icons.arrow_back_rounded),
           ),
           Expanded(
-            child: Text(
-              'Notifications',
-              style: Theme.of(context).textTheme.titleLarge,
+            child: CompactTextScale(
+              child: Text(
+                'Notifications',
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
           ),
-          TextButton(
-            onPressed: onMarkAllRead,
-            child: const Text('Mark all read'),
+          CompactTextScale(
+            child: TextButton(
+              onPressed: onMarkAllRead,
+              child: const Text(
+                'Mark all read',
+                maxLines: 1,
+                softWrap: false,
+              ),
+            ),
           ),
         ],
       ),

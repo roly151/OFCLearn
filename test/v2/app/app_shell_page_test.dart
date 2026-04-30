@@ -107,6 +107,8 @@ void main() {
 
     expect(dashboardLabel.textScaler.scale(12), 12);
     expect(coursesLabel.textScaler.scale(12), 12);
+    expect(
+        dashboardLabel.text.style?.fontSize, coursesLabel.text.style?.fontSize);
     expect(tester.takeException(), isNull);
   });
 }

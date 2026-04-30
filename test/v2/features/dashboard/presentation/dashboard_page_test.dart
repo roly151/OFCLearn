@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ofc_learn_v2/v2/core/dependencies.dart';
 import 'package:ofc_learn_v2/v2/core/config/app_config.dart';
-import 'package:ofc_learn_v2/v2/core/providers.dart';
 import 'package:ofc_learn_v2/v2/features/auth/domain/api_user.dart';
 import 'package:ofc_learn_v2/v2/features/auth/domain/auth_session.dart';
 import 'package:ofc_learn_v2/v2/features/auth/presentation/auth_controller.dart';

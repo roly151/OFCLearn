@@ -77,19 +77,6 @@ class _GroupDetailPageState extends ConsumerState<GroupDetailPage> {
               ),
             ),
           ),
-          PageHeader(
-            title: detail.when(
-              data: (group) =>
-                  group.title.trim().isEmpty ? 'Group detail' : group.title,
-              error: (_, __) => 'Group detail',
-              loading: () => 'Group detail',
-            ),
-            subtitle: detail.when(
-              data: _groupDescriptionText,
-              error: (_, __) => '',
-              loading: () => '',
-            ),
-          ),
           Expanded(
             child: detail.when(
               data: (group) => _GroupDetailTabs(
@@ -134,120 +121,212 @@ class _GroupDetailTabs extends ConsumerWidget {
 
     return DefaultTabController(
       length: 5,
-      child: Column(
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                if (group.parentId > 0) ...<Widget>[
-                  _ParentGroupBreadcrumb(
-                    tab: tab,
-                    parentGroupId: group.parentId,
-                    source: source,
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                _GroupMetaCard(
-                  group: group,
-                  isJoining: isJoining,
-                  onJoin: () async {
-                    try {
-                      final result = await ref
-                          .read(groupJoinControllerProvider.notifier)
-                          .joinGroup(groupId);
-                      if (!context.mounted) {
-                        return;
-                      }
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(result.message)));
-                    } catch (error) {
-                      if (!context.mounted) {
-                        return;
-                      }
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      child: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return <Widget>[
+            SliverToBoxAdapter(
+              child: _GroupDetailHeader(
+                tab: tab,
+                group: group,
+                source: source,
+                isJoining: isJoining,
+                onJoin: () async {
+                  try {
+                    final result = await ref
+                        .read(groupJoinControllerProvider.notifier)
+                        .joinGroup(groupId);
+                    if (!context.mounted) {
+                      return;
                     }
-                  },
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: V2Palette.surface,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: V2Palette.cardBorder),
-              ),
-              child: CompactTextScale(
-                child: TabBar(
-                  dividerColor: Colors.transparent,
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  indicator: BoxDecoration(
-                    color: V2Palette.primaryBlue,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  indicatorPadding: const EdgeInsets.all(6),
-                  labelPadding: EdgeInsets.zero,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: V2Palette.ink,
-                  tabs: const <Widget>[
-                    _DetailTabLabel(
-                      icon: Icons.dynamic_feed_outlined,
-                      label: 'Feed',
-                    ),
-                    _DetailTabLabel(
-                      icon: Icons.forum_outlined,
-                      label: 'Discuss',
-                    ),
-                    _DetailTabLabel(
-                      icon: Icons.folder_copy_outlined,
-                      label: 'Docs',
-                    ),
-                    _DetailTabLabel(
-                      icon: Icons.groups_2_outlined,
-                      label: 'Groups',
-                    ),
-                    _DetailTabLabel(
-                      icon: Icons.notifications_outlined,
-                      label: 'Alerts',
-                    ),
-                  ],
-                ),
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(result.message)));
+                  } catch (error) {
+                    if (!context.mounted) {
+                      return;
+                    }
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(error.toString())));
+                  }
+                },
               ),
             ),
-          ),
-          Expanded(
-            child: TabBarView(
-              children: <Widget>[
-                _GroupFeedTab(
-                  groupId: groupId,
-                  group: group,
-                  parentTab: tab.slug,
-                  postController: postController,
-                ),
-                _GroupDiscussionsTab(groupId: groupId, tab: tab),
-                GroupDocumentsTab(groupId: groupId),
-                _GroupSubgroupsTab(
-                  parentTab: tab,
-                  groupId: groupId,
-                  source: source,
-                ),
-                _GroupNotificationsTab(
-                  groupId: groupId,
-                  canManageNotifications: group.isMember,
-                ),
-              ],
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _GroupTabBarHeaderDelegate(
+                child: const _GroupDetailTabBar(),
+              ),
             ),
+          ];
+        },
+        body: TabBarView(
+          children: <Widget>[
+            _GroupFeedTab(
+              groupId: groupId,
+              group: group,
+              parentTab: tab.slug,
+              postController: postController,
+            ),
+            _GroupDiscussionsTab(groupId: groupId, tab: tab),
+            GroupDocumentsTab(groupId: groupId),
+            _GroupSubgroupsTab(
+              parentTab: tab,
+              groupId: groupId,
+              source: source,
+            ),
+            _GroupNotificationsTab(
+              groupId: groupId,
+              canManageNotifications: group.isMember,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupDetailHeader extends StatelessWidget {
+  const _GroupDetailHeader({
+    required this.tab,
+    required this.group,
+    required this.source,
+    required this.isJoining,
+    required this.onJoin,
+  });
+
+  final AppTab tab;
+  final GroupDetail group;
+  final String? source;
+  final bool isJoining;
+  final Future<void> Function() onJoin;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = group.title.trim().isEmpty ? 'Group detail' : group.title;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (group.parentId > 0) ...<Widget>[
+            _ParentGroupBreadcrumb(
+              tab: tab,
+              parentGroupId: group.parentId,
+              source: source,
+            ),
+            const SizedBox(height: 12),
+          ],
+          Text(title, style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 6),
+          Text(
+            _groupDescriptionText(group),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 14),
+          _GroupMetaCard(
+            group: group,
+            isJoining: isJoining,
+            onJoin: onJoin,
           ),
         ],
       ),
     );
+  }
+}
+
+class _GroupDetailTabBar extends StatelessWidget {
+  const _GroupDetailTabBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: V2Palette.canvas,
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: V2Palette.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: V2Palette.cardBorder),
+          ),
+          child: CompactTextScale(
+            child: TabBar(
+              dividerColor: Colors.transparent,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                color: V2Palette.primaryBlue,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              indicatorPadding: const EdgeInsets.all(6),
+              labelPadding: EdgeInsets.zero,
+              labelColor: Colors.white,
+              unselectedLabelColor: V2Palette.ink,
+              tabs: const <Widget>[
+                _DetailTabLabel(
+                  icon: Icons.dynamic_feed_outlined,
+                  label: 'Feed',
+                ),
+                _DetailTabLabel(
+                  icon: Icons.forum_outlined,
+                  label: 'Discuss',
+                ),
+                _DetailTabLabel(
+                  icon: Icons.folder_copy_outlined,
+                  label: 'Docs',
+                ),
+                _DetailTabLabel(
+                  icon: Icons.groups_2_outlined,
+                  label: 'Groups',
+                ),
+                _DetailTabLabel(
+                  icon: Icons.notifications_outlined,
+                  label: 'Alerts',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupTabBarHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _GroupTabBarHeaderDelegate({required this.child});
+
+  static const double _height = 82;
+
+  final Widget child;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return SizedBox.expand(child: child);
+  }
+
+  @override
+  bool shouldRebuild(covariant _GroupTabBarHeaderDelegate oldDelegate) {
+    return child != oldDelegate.child;
   }
 }
 

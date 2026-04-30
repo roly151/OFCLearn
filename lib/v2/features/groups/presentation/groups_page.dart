@@ -170,6 +170,8 @@ class _GroupsList extends StatelessWidget {
                             children: <Widget>[
                               Text(
                                 group.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
                               const SizedBox(height: 6),
